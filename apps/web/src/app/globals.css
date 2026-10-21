@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+/* colours taken from btu's passport mockup */
+:root {
+  --background: #ffffff;
+  --foreground: #111111;
+  --btu-orange: #ff6a00;
+  --btu-navy: #1b2a6b;
+  --btu-purple: #6a1be6;
+  --btu-red: #f2464b;
+  --muted: #5b5b5b;
+  --line: #d9d9d9;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-btu-orange: var(--btu-orange);
+  --color-btu-navy: var(--btu-navy);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --font-sans: var(--font-archivo), var(--font-georgian), sans-serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-archivo), var(--font-georgian), sans-serif;
+}

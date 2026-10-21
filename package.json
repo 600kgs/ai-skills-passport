@@ -1,0 +1,16 @@
+{
+  "name": "ai-skills-passport",
+  "private": true,
+  "packageManager": "pnpm@12.14.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter ./apps/* dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "db:generate": "pnpm --filter @passport/db generate",
+    "db:migrate": "pnpm --filter @passport/db migrate"
+  }
+}

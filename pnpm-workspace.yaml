@@ -1,0 +1,9 @@
+packages:
+  - apps/*
+  - packages/*
+
+# only these packages may run install scripts
+allowBuilds:
+  esbuild: true
+  sharp: false
+  unrs-resolver: false

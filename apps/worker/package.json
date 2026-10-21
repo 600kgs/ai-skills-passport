@@ -1,0 +1,21 @@
+{
+  "name": "@passport/worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "echo \"no worker tests yet\""
+  },
+  "dependencies": {
+    "@passport/core": "workspace:*",
+    "@passport/db": "workspace:*",
+    "pg-boss": "^12.38.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

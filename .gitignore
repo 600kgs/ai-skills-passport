@@ -25,3 +25,6 @@ storage/
 Thumbs.db
 .vscode/
 .idea/
+
+# local secrets folder
+secrets/

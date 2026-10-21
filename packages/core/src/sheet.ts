@@ -112,7 +112,8 @@ export async function parseSheet(rows: string[][]): Promise<ParsedSheet> {
       results.push({ rowNumber, recordId, ok: false, errors });
       continue;
     }
-    const inputs = [H.studentId, H.firstName, H.lastName, H.email, H.passportId, H.recordId, H.skillId,
+    // passport id stays out: the system writes it back, which mustn't count as an edit
+    const inputs = [H.studentId, H.firstName, H.lastName, H.email, H.recordId, H.skillId,
       H.skillName, H.category, H.description, H.dateEarned, H.verification, H.earnedThrough].map(get);
     results.push({
       rowNumber, recordId, ok: true,

@@ -8,6 +8,20 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # the worker's sync tests run against a real postgres, same as locally
+    services:
+      db:
+        image: postgres:17
+        env:
+          POSTGRES_USER: passport
+          POSTGRES_PASSWORD: passport
+          POSTGRES_DB: passport
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U passport"
+          --health-interval 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v5
       # pnpm version comes from packageManager in package.json

@@ -6,16 +6,20 @@
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit -p .",
-    "test": "echo \"no worker tests yet\""
+    "test": "vitest run"
   },
   "dependencies": {
+    "@googleapis/sheets": "^18.1.1",
     "@passport/core": "workspace:*",
     "@passport/db": "workspace:*",
     "pg-boss": "^12.38.0"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.1",
     "tsx": "^4.23.15",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
   }
 }

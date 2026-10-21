@@ -1,0 +1,19 @@
+{
+  "name": "sas-spike",
+  "version": "1.0.0",
+  "description": "devnet test of the solana attestation service flow",
+  "scripts": {
+    "start": "tsx spike.ts"
+  },
+  "type": "module",
+  "dependencies": {
+    "@solana/kit": "^5.5.1",
+    "sas-lib": "^1.0.10",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  },
+  "private": true,
+  "devDependencies": {
+    "@types/node": "^24.19.2"
+  }
+}

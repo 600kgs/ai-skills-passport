@@ -8,10 +8,10 @@ import {
   signTransactionMessageWithSigners, type Address, type KeyPairSigner,
 } from "@solana/kit";
 import {
-  deriveAttestationPda, deriveCredentialPda, deriveSchemaPda, deserializeAttestationData, fetchMaybeAttestation,
+  deriveAttestationPda, deserializeAttestationData, fetchMaybeAttestation,
   fetchSchema, getCreateAttestationInstruction, serializeAttestationData, type Schema,
 } from "sas-lib";
-import { CREDENTIAL_NAME, nonceFromCode, SCHEMA_NAME, SCHEMA_VERSION, type AttestationData } from "@passport/core";
+import { issuerAddresses, nonceFromCode, type AttestationData } from "@passport/core";
 
 export type Anchored = { address: string; signature: string; signer: string };
 export type Found = Anchored & { pdfSha256: Uint8Array; version: number };
@@ -26,11 +26,7 @@ export async function loadSigner(keyFile: string): Promise<KeyPairSigner> {
   return createKeyPairSignerFromPrivateKeyBytes(Buffer.from(privateKeyHex, "hex"));
 }
 
-export async function credentialAddresses(authority: Address) {
-  const [credential] = await deriveCredentialPda({ authority, name: CREDENTIAL_NAME });
-  const [schema] = await deriveSchemaPda({ credential, name: SCHEMA_NAME, version: SCHEMA_VERSION });
-  return { credential, schema };
-}
+export const credentialAddresses = (authority: Address) => issuerAddresses(authority);
 
 export async function solanaChain(cfg: { rpcUrl: string; wsUrl: string; issuerKeyFile: string; authorityAddress: string }): Promise<Chain> {
   const rpc = createSolanaRpc(cfg.rpcUrl);

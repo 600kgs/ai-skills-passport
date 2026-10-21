@@ -1,6 +1,7 @@
 // background worker: applies db migrations, runs the job queue, and polls the sheet.
 import { fileURLToPath } from "node:url";
-import { createDb, runMigrations } from "@passport/db";
+import { createDb } from "@passport/db";
+import { runMigrations } from "@passport/db/migrate";
 import { PgBoss } from "pg-boss";
 import { solanaChain } from "./chain.ts";
 import { issuePassport, type IssueDeps } from "./issue.ts";

@@ -1,7 +1,8 @@
 // sync scenarios from the brief's demo table, against a real postgres (docker compose `db`)
 import pg from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { createDb, eq, passports, passportVersions, runMigrations, skillAwards, sql, students, type Db } from "@passport/db";
+import { createDb, eq, passports, passportVersions, skillAwards, sql, students, type Db } from "@passport/db";
+import { runMigrations } from "@passport/db/migrate";
 import type { CellUpdate, SheetSource } from "./sheets.ts";
 import { runSync } from "./sync.ts";
 

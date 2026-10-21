@@ -2,7 +2,8 @@
 import pg from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { equalBytes, sha256 } from "@passport/core";
-import { createDb, eq, passports, passportVersions, runMigrations, skillAwards, sql, students, type Db } from "@passport/db";
+import { createDb, eq, passports, passportVersions, skillAwards, sql, students, type Db } from "@passport/db";
+import { runMigrations } from "@passport/db/migrate";
 import type { Chain, Found } from "./chain.ts";
 import { issuePassport, type IssueDeps } from "./issue.ts";
 import type { Passport } from "./pdf/template.ts";

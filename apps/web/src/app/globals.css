@@ -17,6 +17,8 @@
   --color-foreground: var(--foreground);
   --color-btu-orange: var(--btu-orange);
   --color-btu-navy: var(--btu-navy);
+  --color-btu-red: var(--btu-red);
+  --color-btu-purple: var(--btu-purple);
   --color-muted: var(--muted);
   --color-line: var(--line);
   --font-sans: var(--font-archivo), var(--font-georgian), sans-serif;

@@ -1,0 +1,27 @@
+# dependencies and builds
+node_modules/
+dist/
+.next/
+out/
+coverage/
+
+# secrets and keys
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.keys/
+*keypair*.json
+service-account*.json
+
+# generated passports and local data
+*.pdf
+storage/
+*.log
+
+# os and editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

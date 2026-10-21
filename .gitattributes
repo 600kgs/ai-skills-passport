@@ -1,0 +1,6 @@
+# lf everywhere, so scripts written on windows still run on the linux server
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.pdf binary
+*.woff2 binary

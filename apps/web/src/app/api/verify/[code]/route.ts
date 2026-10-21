@@ -2,7 +2,7 @@
 // and the fields already printed on the pdf. nothing beyond that is exposed.
 import { normalizeCode } from "@passport/core";
 import { and, eq, inArray, passports, passportVersions, skillAwards, students } from "@passport/db";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { allow, clientKey } from "@/lib/rate-limit";
 
 export type VerifyInfo = {
@@ -20,6 +20,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/verify/[code]">)
   const code = normalizeCode((await ctx.params).code);
   if (!code) return Response.json({ error: "not found" }, { status: 404 });
 
+  const db = getDb();
   const [row] = await db.select({ version: passportVersions, passport: passports, student: students })
     .from(passportVersions)
     .innerJoin(passports, eq(passports.passportId, passportVersions.passportId))

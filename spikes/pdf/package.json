@@ -1,0 +1,21 @@
+{
+  "name": "pdf-spike",
+  "version": "1.0.0",
+  "description": "passport pdf rendering through gotenberg",
+  "scripts": {
+    "start": "tsx render.ts"
+  },
+  "type": "module",
+  "dependencies": {
+    "@fontsource/archivo": "^5.3.0",
+    "@fontsource/noto-sans-georgian": "^5.3.0",
+    "qrcode": "^1.5.4",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "@types/qrcode": "^1.5.6"
+  },
+  "private": true
+}

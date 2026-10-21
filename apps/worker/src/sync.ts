@@ -19,7 +19,7 @@ export type SyncSummary = {
 };
 
 type Status = "NOT SYNCED" | "SYNCED" | "FAILED";
-type RowState = { status: Status; note: string; version: string; syncedAt: string; passportId?: string };
+type RowState = { status: Status; note: string; version: string; syncedAt: string; passportId?: string; firstIssued?: string };
 
 const fmtUtc = (d: Date) => `${d.toISOString().slice(0, 16).replace("T", " ")} UTC`;
 const passportNo = (id: string | null | undefined) => Number(/^BTU-AI-(\d{6})$/.exec(id ?? "")?.[1] ?? 0);
@@ -69,9 +69,11 @@ export async function runSync(
       const first = recs[0]!;
       const known = knownStudents.get(studentId);
       let passportId: string;
+      let firstIssued: string;
 
       if (known) {
         passportId = passportOf.get(studentId)!.passportId;
+        firstIssued = passportOf.get(studentId)!.firstIssued;
         const sameName = known.firstName === first.firstName && known.lastName === first.lastName;
         const sameEmail = known.email.toLowerCase() === first.email.toLowerCase();
         if (!sameName || !sameEmail) {
@@ -94,6 +96,7 @@ export async function runSync(
         }
         // keep the passport id btu already gave this student, else assign the next one
         passportId = first.passportId ?? `BTU-AI-${String(++nextNo).padStart(6, "0")}`;
+        firstIssued = first.firstIssued ?? today;
         const owner = ownerOfPassport.get(passportId);
         if (owner) {
           recs.forEach((r) => fail(r.rowNumber, `Passport ID ${passportId} already belongs to ${owner}`));
@@ -103,7 +106,7 @@ export async function runSync(
           studentId, firstName: first.firstName, lastName: first.lastName, email: first.email,
           program: first.program, educationLevel: first.educationLevel, status: first.studentStatus,
         });
-        await tx.insert(passports).values({ passportId, studentId, firstIssued: first.firstIssued ?? today });
+        await tx.insert(passports).values({ passportId, studentId, firstIssued });
         ownerOfPassport.set(passportId, studentId);
         ownerOfEmail.set(first.email.toLowerCase(), studentId);
         newPassports++;
@@ -122,7 +125,7 @@ export async function runSync(
           await tx.insert(skillAwards).values({ recordId: r.recordId, studentId, ...fields, state: wanted });
           newRecords++;
           audit.push({ actor: "system", action: "award_recorded", subject: r.recordId, details: { studentId, state: wanted } });
-          rowState.set(r.rowNumber, ignoredOrPending(wanted, r, passportId));
+          rowState.set(r.rowNumber, ignoredOrPending(wanted, r, passportId, firstIssued));
           continue;
         }
         if (award.studentId !== studentId) {
@@ -131,7 +134,7 @@ export async function runSync(
         }
         if (award.state === "applied") {
           const v = award.appliedInVersionId ? versions.get(award.appliedInVersionId) : undefined;
-          const issued = { version: v ? `V${v.versionNo}` : "", syncedAt: v?.issuedAt ? fmtUtc(v.issuedAt) : "", passportId };
+          const issued = { version: v ? `V${v.versionNo}` : "", syncedAt: v?.issuedAt ? fmtUtc(v.issuedAt) : "", passportId, firstIssued };
           if (award.rowHash !== r.rowHash) {
             // issued skills are frozen; the passport keeps what was confirmed at the time
             fail(r.rowNumber, "edited after it was issued; issued passports don't change. Restore the original values or add a new record", issued);
@@ -145,7 +148,7 @@ export async function runSync(
           updatedRecords++;
           audit.push({ actor: "system", action: "award_updated", subject: r.recordId, details: { state: wanted } });
         }
-        rowState.set(r.rowNumber, ignoredOrPending(wanted, r, passportId));
+        rowState.set(r.rowNumber, ignoredOrPending(wanted, r, passportId, firstIssued));
       }
     }
 
@@ -174,9 +177,9 @@ export async function runSync(
   return { rowsSeen: grid.length, ...result, failedRows, cellsWritten: updates.length };
 }
 
-function ignoredOrPending(state: "pending" | "ignored", r: SkillRecord, passportId: string): RowState {
+function ignoredOrPending(state: "pending" | "ignored", r: SkillRecord, passportId: string, firstIssued: string): RowState {
   const note = state === "ignored" ? `status ${r.verification}: not added to the passport` : "";
-  return { status: "NOT SYNCED", note, version: "", syncedAt: "", passportId };
+  return { status: "NOT SYNCED", note, version: "", syncedAt: "", passportId, firstIssued };
 }
 
 // only cells whose value actually changes, so a quiet run writes nothing
@@ -193,6 +196,7 @@ function cellUpdates(grid: string[][], columns: Record<string, number>, rows: Ma
     set(row, H.syncedAt, s.syncedAt);
     set(row, H.syncError, s.note);
     set(row, H.passportId, s.passportId);
+    set(row, H.firstIssued, s.firstIssued);
   }
   return out;
 }

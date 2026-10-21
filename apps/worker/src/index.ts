@@ -2,7 +2,11 @@
 import { fileURLToPath } from "node:url";
 import { createDb, runMigrations } from "@passport/db";
 import { PgBoss } from "pg-boss";
+import { solanaChain } from "./chain.ts";
+import { issuePassport, type IssueDeps } from "./issue.ts";
+import { gotenbergRenderer } from "./pdf/render.ts";
 import { googleSheet } from "./sheets.ts";
+import { fileStore } from "./storage.ts";
 import { runSync } from "./sync.ts";
 
 const root = (p: string) => fileURLToPath(new URL(`../../../${p}`, import.meta.url));
@@ -26,12 +30,31 @@ console.log("db migrations applied");
 const boss = new PgBoss(url);
 boss.on("error", (e) => console.error("queue error:", e));
 await boss.start();
-// one queued + one running job per passport; a skill arriving mid-issue gets the next run
-await boss.createQueue(ISSUE_QUEUE, { policy: "stately" });
+// one queued + one running job per passport; a skill arriving mid-issue gets the next run.
+// failures retry with backoff, and each retry resumes the same unfinished version
+await boss.createQueue(ISSUE_QUEUE, { policy: "stately", retryLimit: 5, retryDelay: 15, retryBackoff: true });
+
+const path = (name: string) => {
+  const p = env(name);
+  return p.startsWith(".") ? root(p) : p;
+};
+const deps: IssueDeps = {
+  render: gotenbergRenderer(env("GOTENBERG_URL")),
+  store: fileStore(path("STORAGE_DIR")),
+  publicBaseUrl: env("PUBLIC_BASE_URL"),
+  chain: await solanaChain({
+    rpcUrl: env("SOLANA_RPC_URL"), wsUrl: env("SOLANA_WS_URL"),
+    issuerKeyFile: path("ISSUER_KEY_FILE"), authorityAddress: env("AUTHORITY_ADDRESS"),
+  }),
+};
+await boss.work<{ passportId: string }>(ISSUE_QUEUE, async ([job]) => {
+  const r = await issuePassport(db, deps, job!.data.passportId);
+  if (r.status === "issued") console.log(`issued ${r.passportId} V${r.versionNo} (${r.code}) -> ${r.attestation}`);
+  return r;
+});
 console.log("worker ready, queue running");
 
-const keyFile = env("GOOGLE_SERVICE_ACCOUNT_FILE");
-const sheet = googleSheet(env("SHEET_ID"), keyFile.startsWith(".") ? root(keyFile) : keyFile);
+const sheet = googleSheet(env("SHEET_ID"), path("GOOGLE_SERVICE_ACCOUNT_FILE"));
 const enqueue = async (passportId: string) => { await boss.send(ISSUE_QUEUE, { passportId }, { singletonKey: passportId }); };
 
 let syncing = false;

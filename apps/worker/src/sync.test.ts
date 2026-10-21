@@ -65,6 +65,8 @@ describe("sheet sync", () => {
     expect(rows.map((p) => p.passportId).sort()).toEqual(["BTU-AI-000125", "BTU-AI-000126"]);
     // the assigned id is written back, and fake "SYNCED V1" is corrected to the ledger's truth
     expect(sheet.cell(7, "Passport ID (Existing)")).toBe("BTU-AI-000126");
+    expect(sheet.cell(7, "First Issued (Existing)")).toBe("2026-10-21");
+    expect(sheet.cell(5, "First Issued (Existing)")).toBe("2026-09-15"); // btu's date is kept
     expect(sheet.cell(5, "Passport Sync Status")).toBe("NOT SYNCED");
     expect(sheet.cell(5, "Synced Passport Version")).toBe("");
     expect(queued.sort()).toEqual(["BTU-AI-000125", "BTU-AI-000126"]);

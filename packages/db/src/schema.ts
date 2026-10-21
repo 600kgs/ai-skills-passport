@@ -54,6 +54,8 @@ export const passportVersions = pgTable("passport_versions", {
   verificationCode: text("verification_code").notNull().unique(),
   state: versionState("state").notNull().default("rendering"),
   skillCount: integer("skill_count").notNull(),
+  // exactly which award records this version contains, fixed when the version is created
+  includedRecordIds: text("included_record_ids").array().notNull().default(sql`'{}'::text[]`),
   pdfSha256: text("pdf_sha256"),
   pdfPath: text("pdf_path"),
   attestationAddress: text("attestation_address"),

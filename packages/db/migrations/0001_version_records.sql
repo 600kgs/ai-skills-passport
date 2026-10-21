@@ -1,0 +1,1 @@
+ALTER TABLE "passport_versions" ADD COLUMN "included_record_ids" text[] DEFAULT '{}'::text[] NOT NULL;

@@ -19,14 +19,14 @@
     "@solana/kit": "^5.5.1",
     "pg-boss": "^12.38.0",
     "qrcode": "^1.5.4",
-    "sas-lib": "1.0.10"
+    "sas-lib": "1.0.10",
+    "tsx": "^4.23.15"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
     "@types/pg": "^8.23.1",
     "@types/qrcode": "^1.5.6",
     "pg": "^8.23.1",
-    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.0.5"
   }

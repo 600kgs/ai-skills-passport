@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   agentRules: false,
+  // self-contained server for the docker image; trace from the repo root so workspace packages are included
+  output: "standalone",
+  outputFileTracingRoot: fileURLToPath(new URL("../../", import.meta.url)),
   // workspace packages ship as typescript source
   transpilePackages: ["@passport/core", "@passport/db"],
   serverExternalPackages: ["pg"],

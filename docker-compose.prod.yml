@@ -1,0 +1,95 @@
+# production stack. on the server: docker compose -f docker-compose.prod.yml up -d --build
+# values come from .env next to this file (see .env.example, production section).
+# only caddy has public ports; everything else talks over the compose network.
+name: passport
+
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - web
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://passport:${POSTGRES_PASSWORD}@db:5432/passport
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?}
+      SOLANA_RPC_URL: ${SOLANA_RPC_URL:?}
+      AUTHORITY_ADDRESS: ${AUTHORITY_ADDRESS:?}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    restart: unless-stopped
+    # forwards stop signals so the queue shuts down cleanly
+    init: true
+    environment:
+      DATABASE_URL: postgres://passport:${POSTGRES_PASSWORD}@db:5432/passport
+      GOTENBERG_URL: http://gotenberg:3000
+      STORAGE_DIR: /data/storage
+      SHEET_ID: ${SHEET_ID:?}
+      GOOGLE_SERVICE_ACCOUNT_FILE: /run/secrets/service-account
+      SOLANA_RPC_URL: ${SOLANA_RPC_URL:?}
+      SOLANA_WS_URL: ${SOLANA_WS_URL:?}
+      ISSUER_KEY_FILE: /run/secrets/issuer-key
+      AUTHORITY_ADDRESS: ${AUTHORITY_ADDRESS:?}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?}
+    secrets:
+      - service-account
+      - issuer-key
+    volumes:
+      - storage:/data/storage
+    depends_on:
+      db:
+        condition: service_healthy
+      gotenberg:
+        condition: service_started
+
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: passport
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: passport
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U passport"]
+      interval: 5s
+      retries: 10
+
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    restart: unless-stopped
+
+# key files stay on the host (chmod 600, owned by the deploy user) and are mounted read-only
+secrets:
+  service-account:
+    file: ./secrets/service-account.json
+  issuer-key:
+    file: ./secrets/issuer.json
+
+volumes:
+  db-data:
+  storage:
+  caddy-data:
+  caddy-config:

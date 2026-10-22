@@ -1,0 +1,6 @@
+# https certificate is issued and renewed automatically for $DOMAIN
+{$DOMAIN} {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000"
+	reverse_proxy web:3000
+}

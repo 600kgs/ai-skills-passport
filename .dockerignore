@@ -1,0 +1,15 @@
+# keep secrets, local data and host builds out of every image
+.env
+.env.*
+secrets/
+storage/
+spikes/
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/*.tsbuildinfo
+**/*.log
+**/*.pdf
+.git
+.github

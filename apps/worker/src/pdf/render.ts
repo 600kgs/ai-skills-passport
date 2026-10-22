@@ -7,9 +7,11 @@ export type Renderer = (p: Passport) => Promise<Uint8Array>;
 
 const require = createRequire(import.meta.url);
 const FONTS: Record<string, string> = {
-  "archivo-400.woff2": "@fontsource/archivo/files/archivo-latin-400-normal.woff2",
-  "archivo-700.woff2": "@fontsource/archivo/files/archivo-latin-700-normal.woff2",
-  "archivo-900.woff2": "@fontsource/archivo/files/archivo-latin-900-normal.woff2",
+  "poppins-300.woff2": "@fontsource/poppins/files/poppins-latin-300-normal.woff2",
+  "poppins-400.woff2": "@fontsource/poppins/files/poppins-latin-400-normal.woff2",
+  "poppins-700.woff2": "@fontsource/poppins/files/poppins-latin-700-normal.woff2",
+  "poppins-800.woff2": "@fontsource/poppins/files/poppins-latin-800-normal.woff2",
+  "poppins-900.woff2": "@fontsource/poppins/files/poppins-latin-900-normal.woff2",
   "georgian-400.woff2": "@fontsource/noto-sans-georgian/files/noto-sans-georgian-georgian-400-normal.woff2",
   "georgian-700.woff2": "@fontsource/noto-sans-georgian/files/noto-sans-georgian-georgian-700-normal.woff2",
 };

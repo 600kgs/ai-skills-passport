@@ -11,8 +11,8 @@
     "verify": "tsx scripts/verify.ts"
   },
   "dependencies": {
-    "@fontsource/archivo": "^5.3.0",
     "@fontsource/noto-sans-georgian": "^5.3.0",
+    "@fontsource/poppins": "^5.3.0",
     "@googleapis/sheets": "^18.1.1",
     "@passport/core": "workspace:*",
     "@passport/db": "workspace:*",

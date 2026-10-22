@@ -217,10 +217,10 @@ importers:
 
   apps/worker:
     dependencies:
-      '@fontsource/archivo':
+      '@fontsource/noto-sans-georgian':
         specifier: ^5.3.0
         version: 5.3.0
-      '@fontsource/noto-sans-georgian':
+      '@fontsource/poppins':
         specifier: ^5.3.0
         version: 5.3.0
       '@googleapis/sheets':
@@ -968,11 +968,11 @@ packages:
     resolution: {integrity: sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
-  '@fontsource/archivo@5.3.0':
-    resolution: {integrity: sha512-5DIMgPVJRi62OqdOVoogCFxP73EkNM/E0YVTSDIQlDEJfDbxqZduwM/YoNZwC9Sx1CDgpKinqf8ckRY1QNIecw==}
-
   '@fontsource/noto-sans-georgian@5.3.0':
     resolution: {integrity: sha512-+a+N1mvCugsggDb5eKPKcwDXQQtbaV+x9/Zo2/p2c9yAZeib+qD2ftbezbPAoLvBf4MP+F8BdDwHdrlnNRSdng==}
+
+  '@fontsource/poppins@5.3.0':
+    resolution: {integrity: sha512-cms1nM7U6SN8epIV1WMVOV8VsA645aSm3wHfzIQnkk188U341ThbJGSl2Sv54V29gnDbT2arMPfLzvVIIVCceQ==}
 
   '@googleapis/sheets@18.1.1':
     resolution: {integrity: sha512-T2AOp0AhDdZ3imQyy3d8AnRMdPFwibKKcmKttWxLBKeiJKmE9p7RFrBpdbswpJ1d3cPdO5kvcYDuKajUFqwraA==}
@@ -4640,9 +4640,9 @@ snapshots:
       '@eslint/core': 0.17.0
       levn: 0.4.1
 
-  '@fontsource/archivo@5.3.0': {}
-
   '@fontsource/noto-sans-georgian@5.3.0': {}
+
+  '@fontsource/poppins@5.3.0': {}
 
   '@googleapis/sheets@18.1.1(supports-color@7.2.0)':
     dependencies:
@@ -6002,6 +6002,7 @@ snapshots:
       '@types/pg': 8.23.1
       kysely: 0.29.7
       pg: 8.23.1
+    optional: true
 
   drizzle-orm@0.45.4(@opentelemetry/api@1.9.1)(@types/pg@8.23.1)(pg@8.23.1):
     optionalDependencies:

@@ -18,7 +18,8 @@ export async function GET(req: Request) {
   const { credential, schema } = await issuerAddresses(authority);
   const doc: IssuerDocument = {
     issuer: "Business and Technology University (BTU), hackathon test issuer",
-    domain: new URL(req.url).host,
+    // the configured public address; behind the proxy req.url only knows the container's own host
+    domain: new URL(process.env.PUBLIC_BASE_URL ?? req.url).host,
     network: process.env.SOLANA_RPC_URL?.includes("devnet") ? "devnet" : "mainnet",
     rpcUrl: process.env.SOLANA_RPC_URL ?? "https://api.devnet.solana.com",
     authority, credential, schema,

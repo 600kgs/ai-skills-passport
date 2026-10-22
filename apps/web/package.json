@@ -12,6 +12,7 @@
   "dependencies": {
     "@passport/core": "workspace:*",
     "@passport/db": "workspace:*",
+    "better-auth": "1.7.12",
     "next": "16.4.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",

@@ -1,3 +1,4 @@
+export * from "./access.ts";
 export * from "./chain.ts";
 export * from "./chain-read.ts";
 export * from "./codes.ts";

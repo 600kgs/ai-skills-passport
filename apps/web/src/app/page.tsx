@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { normalizeCode } from "@passport/core";
@@ -44,6 +45,11 @@ export default function HomePage() {
         </button>
       </form>
       {error && <p id="code-error" className="mt-4 border-l-4 border-btu-red pl-4">{error}</p>}
+
+      <p className="mt-16 border-t border-line pt-6">
+        BTU student? <Link href="/login" className="font-bold underline">Sign in to download your passport</Link>.
+      </p>
+      <p className="mt-2 text-sm text-muted"><Link href="/privacy" className="underline">Privacy</Link></p>
     </main>
   );
 }

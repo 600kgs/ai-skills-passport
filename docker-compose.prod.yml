@@ -30,6 +30,13 @@ services:
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?}
       SOLANA_RPC_URL: ${SOLANA_RPC_URL:?}
       AUTHORITY_ADDRESS: ${AUTHORITY_ADDRESS:?}
+      AUTH_SECRET: ${AUTH_SECRET:?}
+      AUTH_GOOGLE_ID: ${AUTH_GOOGLE_ID:?}
+      AUTH_GOOGLE_SECRET: ${AUTH_GOOGLE_SECRET:?}
+      STORAGE_DIR: /data/storage
+    # students download the stored pdfs; only the worker writes them
+    volumes:
+      - storage:/data/storage:ro
     depends_on:
       db:
         condition: service_healthy

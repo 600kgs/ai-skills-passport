@@ -130,7 +130,7 @@ export async function renderHtml(p: Passport): Promise<string> {
   dl { margin-top: 11mm; font-size: 19pt; } dl div { display: flex; align-items: baseline; gap: 4mm; margin-bottom: 4mm; }
   dt { font-weight: 800; text-transform: uppercase; } dd { font-weight: 300; }
   dl .issue { position: absolute; left: 160mm; top: 74mm; font-size: 14pt; }
-  .stickers { position: absolute; left: 132mm; top: 79mm; }
+  .stickers { position: absolute; left: 132mm; top: 79mm; } .stickers img { position: absolute; }
   .about { display: grid; grid-template-columns: 82mm 1fr; column-gap: 6mm; }
   .about p { font-size: 7.6pt; line-height: 1.45; font-weight: 300; text-align: justify; }
   .about-left p { margin-top: 3.6mm; } .about-left h2 { font-size: 23pt; margin-bottom: 2mm; }

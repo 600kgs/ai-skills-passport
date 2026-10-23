@@ -33,6 +33,8 @@ services:
       AUTH_SECRET: ${AUTH_SECRET:?}
       AUTH_GOOGLE_ID: ${AUTH_GOOGLE_ID:?}
       AUTH_GOOGLE_SECRET: ${AUTH_GOOGLE_SECRET:?}
+      # comma-separated btu emails; empty means nobody can open /admin
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
       STORAGE_DIR: /data/storage
     # students download the stored pdfs; only the worker writes them
     volumes:

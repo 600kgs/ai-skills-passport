@@ -13,6 +13,7 @@ export type SyncSummary = {
   newRecords: number;
   updatedRecords: number;
   failedRows: number;
+  problems: { row: number; recordId: string; note: string }[];
   newPassports: number;
   queued: string[];
   cellsWritten: number;
@@ -162,19 +163,25 @@ export async function runSync(
   });
 
   if (!result) {
-    return { skipped: "locked", rowsSeen: grid.length, newRecords: 0, updatedRecords: 0, failedRows: 0, newPassports: 0, queued: [], cellsWritten: 0 };
+    return { skipped: "locked", rowsSeen: grid.length, newRecords: 0, updatedRecords: 0, failedRows: 0, problems: [], newPassports: 0, queued: [], cellsWritten: 0 };
   }
 
   const updates = cellUpdates(grid, parsed.columns, rowState);
   await sheet.write(updates);
   for (const p of result.queued) await opts.enqueue(p);
 
-  const failedRows = [...rowState.values()].filter((s) => s.status === "FAILED").length;
-  await db.insert(syncRuns).values({
-    trigger: opts.trigger, finishedAt: new Date(), rowsSeen: grid.length,
-    newRecords: result.newRecords, failedRecords: failedRows,
-  });
-  return { rowsSeen: grid.length, ...result, failedRows, cellsWritten: updates.length };
+  const recordIdOf = new Map(parsed.results.map((r) => [r.rowNumber, r.recordId]));
+  const problems = [...rowState].filter(([, s]) => s.status === "FAILED")
+    .map(([row, s]) => ({ row, recordId: recordIdOf.get(row) ?? "", note: s.note }));
+  const summary = { rowsSeen: grid.length, ...result, failedRows: problems.length, problems, cellsWritten: updates.length };
+  // a poll that changed nothing isn't worth a row; the sheet already shows the same state
+  if (opts.trigger === "manual" || summary.newRecords || summary.updatedRecords || summary.newPassports || summary.cellsWritten) {
+    await db.insert(syncRuns).values({
+      trigger: opts.trigger, finishedAt: new Date(), rowsSeen: grid.length,
+      newRecords: result.newRecords, failedRecords: problems.length, problems,
+    });
+  }
+  return summary;
 }
 
 function ignoredOrPending(state: "pending" | "ignored", r: SkillRecord, passportId: string, firstIssued: string): RowState {

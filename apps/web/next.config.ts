@@ -15,7 +15,9 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: fileURLToPath(new URL("../../", import.meta.url)),
   // workspace packages ship as typescript source
   transpilePackages: ["@passport/core", "@passport/db"],
-  serverExternalPackages: ["pg"],
+  serverExternalPackages: ["pg", "pg-boss"],
+  // forbidden() for signed-in accounts that aren't admins
+  experimental: { authInterrupts: true },
   turbopack: {
     rules: {
       "*.css": {

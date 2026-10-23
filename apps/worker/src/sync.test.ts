@@ -1,7 +1,7 @@
 // sync scenarios from the brief's demo table, against a real postgres (docker compose `db`)
 import pg from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { createDb, eq, passports, passportVersions, skillAwards, sql, students, type Db } from "@passport/db";
+import { createDb, eq, passports, passportVersions, skillAwards, sql, students, syncRuns, type Db } from "@passport/db";
 import { runMigrations } from "@passport/db/migrate";
 import type { CellUpdate, SheetSource } from "./sheets.ts";
 import { runSync } from "./sync.ts";
@@ -144,5 +144,25 @@ describe("sheet sync", () => {
     sheet.grid[4]![COL["Passport ID (Existing)"]!] = "BTU-AI-000999";
     await sync(sheet);
     expect(sheet.cell(5, "Sync Error / Notes")).toContain("doesn't match this student's passport");
+  });
+});
+
+describe("sync log", () => {
+  const poll = (s: SheetSource) => runSync(db, s, { trigger: "poll", enqueue: async () => {}, today: "2026-10-21" });
+
+  it("logs polls that change something, with the rows it couldn't take, and skips quiet ones", async () => {
+    const sheet = sheetOf(record(giorgi, "REC-0001"), record({ ...giorgi, id: "BTU-X-0001" }, "REC-0099"));
+    await poll(sheet);
+    await poll(sheet);
+    const runs = await db.select().from(syncRuns);
+    expect(runs).toHaveLength(1);
+    expect(runs[0]?.problems).toEqual([{ row: 6, recordId: "REC-0099", note: expect.stringContaining("bad Student ID") }]);
+  });
+
+  it("always logs a sync an admin asked for", async () => {
+    const sheet = sheetOf(record(giorgi, "REC-0001"));
+    await sync(sheet);
+    await sync(sheet);
+    expect(await db.$count(syncRuns)).toBe(2);
   });
 });

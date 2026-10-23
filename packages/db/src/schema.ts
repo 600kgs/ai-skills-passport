@@ -77,6 +77,8 @@ export const syncRuns = pgTable("sync_runs", {
   rowsSeen: integer("rows_seen"),
   newRecords: integer("new_records"),
   failedRecords: integer("failed_records"),
+  // the sheet rows sync couldn't take, with the reason; what the admin page lists to fix
+  problems: jsonb("problems").$type<{ row: number; recordId: string; note: string }[]>(),
   error: text("error"),
 });
 

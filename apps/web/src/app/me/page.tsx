@@ -30,6 +30,7 @@ async function MyPassport() {
     <>
       <p className="mt-6 text-sm text-muted">
         Signed in as {user.email}. <SignOutButton />
+        {user.isAdmin && <> <Link href="/admin" className="ml-3 font-bold underline">Open admin</Link></>}
       </p>
 
       {!passport ? (

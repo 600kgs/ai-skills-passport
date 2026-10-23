@@ -15,6 +15,13 @@
       "when": 1792599147762,
       "tag": "0001_version_records",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792782945030,
+      "tag": "0002_sync_problems",
+      "breakpoints": true
     }
   ]
 }

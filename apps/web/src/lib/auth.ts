@@ -1,6 +1,6 @@
 import "server-only";
 import { headers } from "next/headers";
-import { BTU_DOMAIN, isBtuAccount } from "@passport/core";
+import { BTU_DOMAIN, isAdmin, isBtuAccount } from "@passport/core";
 import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 
@@ -31,7 +31,7 @@ function createAuth() {
 const g = globalThis as unknown as { passportAuth?: ReturnType<typeof createAuth> };
 export const getAuth = () => (g.passportAuth ??= createAuth());
 
-export type Student = { email: string; name: string };
+export type Student = { email: string; name: string; isAdmin: boolean };
 
 // the signed-in btu account, or null for anyone else
 export async function currentUser(): Promise<Student | null> {
@@ -39,5 +39,11 @@ export async function currentUser(): Promise<Student | null> {
   const requestHeaders = await headers();
   const session = await getAuth().api.getSession({ headers: requestHeaders });
   if (!session || !isBtuAccount(session.user)) return null;
-  return { email: session.user.email, name: session.user.name };
+  return { email: session.user.email, name: session.user.name, isAdmin: isAdmin(session.user, process.env.ADMIN_EMAILS) };
+}
+
+// every admin page and action calls this itself; nothing relies on a layout or link being hidden
+export async function currentAdmin(): Promise<Student | null> {
+  const user = await currentUser();
+  return user?.isAdmin ? user : null;
 }

@@ -40,15 +40,15 @@ const storageDir = () => {
   return isAbsolute(dir) ? dir : resolve(/*turbopackIgnore: true*/ process.cwd(), "../..", dir);
 };
 
-// the stored pdf for a code, only if it belongs to this email. null covers "no such code"
-// and "not yours" alike, so codes can't be probed for ownership
-export async function pdfFor(code: string, email: string): Promise<{ bytes: Uint8Array<ArrayBuffer>; name: string } | null> {
+// the stored pdf for a code, only if it belongs to this email (admins may open any). null covers
+// "no such code" and "not yours" alike, so codes can't be probed for ownership
+export async function pdfFor(code: string, user: { email: string; isAdmin: boolean }): Promise<{ bytes: Uint8Array<ArrayBuffer>; name: string } | null> {
   const [row] = await getDb().select({ version: passportVersions, student: students })
     .from(passportVersions)
     .innerJoin(passports, eq(passports.passportId, passportVersions.passportId))
     .innerJoin(students, eq(students.studentId, passports.studentId))
     .where(and(eq(passportVersions.verificationCode, code), eq(passportVersions.state, "issued")));
-  if (!row || !sameEmail(row.student.email, email) || !row.version.pdfSha256) return null;
+  if (!row || !(user.isAdmin || sameEmail(row.student.email, user.email)) || !row.version.pdfSha256) return null;
 
   // stored under its own hash; serve it only if it still is that file, byte for byte
   const bytes = new Uint8Array(await readFile(join(storageDir(), "pdfs", `${row.version.pdfSha256}.pdf`)));

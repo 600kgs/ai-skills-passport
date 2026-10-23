@@ -67,6 +67,28 @@ describe("parseSheet", () => {
     expect(results.map((r) => r.ok && r.record.verification)).toEqual(["CONFIRMED", "PENDING"]);
   });
 
+  it("treats a blank status cell as pending once the column exists", async () => {
+    const rows = sheet(row(giorgi, "REC-0001"));
+    rows[3] = [...HEADER, "Verification Status"];
+    rows[4] = [...rows[4]!, ""];
+    const [r] = (await parseSheet(rows)).results;
+    expect(r?.ok && r.record.verification).toBe("PENDING");
+  });
+
+  it("keeps the row hash when a status column with confirmed is added", async () => {
+    const withStatus = (status: string) => {
+      const rows = sheet(row(giorgi, "REC-0001"));
+      rows[3] = [...HEADER, "Verification Status"];
+      rows[4] = [...rows[4]!, status];
+      return rows;
+    };
+    const hashes = await Promise.all([sheet(row(giorgi, "REC-0001")), withStatus("CONFIRMED"), withStatus("confirmed"), withStatus("REJECTED")]
+      .map(async (s) => { const [r] = (await parseSheet(s)).results; return r?.ok && r.record.rowHash; }));
+    expect(hashes[1]).toBe(hashes[0]);
+    expect(hashes[2]).toBe(hashes[0]);
+    expect(hashes[3]).not.toBe(hashes[0]);
+  });
+
   it("gives a new row hash when the content is edited", async () => {
     const [a] = (await parseSheet(sheet(row(giorgi, "REC-0001")))).results;
     const edited = row(giorgi, "REC-0001");

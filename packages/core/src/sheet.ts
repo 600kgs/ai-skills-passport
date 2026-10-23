@@ -91,8 +91,9 @@ export async function parseSheet(rows: string[][]): Promise<ParsedSheet> {
     const stamp = get(H.stampCode);
     if (stamp && isCategory(category) && stamp !== CATEGORIES[category]) errors.push(`stamp ${stamp} doesn't match ${category}`);
 
-    // no status column means every row is confirmed (btu's sheet notes say so)
-    const verification = (columns[H.verification] === undefined ? "CONFIRMED" : get(H.verification).toUpperCase()) as Verification;
+    // no status column means every row is confirmed (btu's sheet notes say so).
+    // with the column, a blank cell means nobody confirmed it yet
+    const verification = (columns[H.verification] === undefined ? "CONFIRMED" : get(H.verification).toUpperCase() || "PENDING") as Verification;
     if (!["CONFIRMED", "PENDING", "REJECTED"].includes(verification)) errors.push(`verification status "${get(H.verification)}"`);
 
     if (recordId) {
@@ -112,9 +113,12 @@ export async function parseSheet(rows: string[][]): Promise<ParsedSheet> {
       results.push({ rowNumber, recordId, ok: false, errors });
       continue;
     }
-    // passport id stays out: the system writes it back, which mustn't count as an edit
-    const inputs = [H.studentId, H.firstName, H.lastName, H.email, H.recordId, H.skillId,
-      H.skillName, H.category, H.description, H.dateEarned, H.verification, H.earnedThrough].map(get);
+    // passport id stays out: the system writes it back, which mustn't count as an edit.
+    // status hashes normalized, confirmed as "" like a sheet without the column, so adding
+    // the column to a sheet with issued rows (or typing "confirmed") isn't an edit either
+    const inputs = [...[H.studentId, H.firstName, H.lastName, H.email, H.recordId, H.skillId,
+      H.skillName, H.category, H.description, H.dateEarned].map(get),
+      verification === "CONFIRMED" ? "" : verification, get(H.earnedThrough)];
     results.push({
       rowNumber, recordId, ok: true,
       record: {

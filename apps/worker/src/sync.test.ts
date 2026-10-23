@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createDb, eq, passports, passportVersions, skillAwards, sql, students, syncRuns, type Db } from "@passport/db";
 import { runMigrations } from "@passport/db/migrate";
 import type { CellUpdate, SheetSource } from "./sheets.ts";
+import { planImport } from "./import.ts";
 import { runSync } from "./sync.ts";
 
 const ADMIN_URL = process.env.TEST_ADMIN_DATABASE_URL ?? "postgres://passport:passport@localhost:5433/passport";
@@ -33,6 +34,7 @@ class FakeSheet implements SheetSource {
     this.writes.push(updates);
     for (const u of updates) this.grid[u.row - 1]![u.col] = u.value;
   }
+  async insertRows(beforeRow: number, rows: string[][]) { this.grid.splice(beforeRow - 1, 0, ...rows.map((r) => [...r])); }
   cell(row: number, header: string) { return this.grid[row - 1]![COL[header]!]; }
 }
 const sheetOf = (...records: string[][]) => new FakeSheet([["BTU | TEST DATA"], [], [], HEADER, ...records, [], ["TECHNICAL NOTES"]]);
@@ -164,5 +166,22 @@ describe("sync log", () => {
     await sync(sheet);
     await sync(sheet);
     expect(await db.$count(syncRuns)).toBe(2);
+  });
+});
+
+describe("excel upload", () => {
+  it("inserts the valid rows above the notes, and sync takes them like any sheet row", async () => {
+    const sheet = sheetOf(record(giorgi, "REC-0001"));
+    await sync(sheet);
+    const file = [HEADER.slice(0, 16), record(nino, "REC-0003").slice(0, 16), record(giorgi, "REC-0001").slice(0, 16)];
+    const plan = await planImport(await sheet.read(), file);
+    expect(plan.valid.map((r) => r.recordId)).toEqual(["REC-0003"]); // REC-0001 is already in the sheet
+    await sheet.insertRows(plan.insertAt, plan.valid.map((r) => r.values));
+
+    expect(sheet.grid[plan.insertAt - 1]![COL["Record ID"]!]).toBe("REC-0003");
+    expect(sheet.grid.at(-1)).toEqual(["TECHNICAL NOTES"]);
+    const s = await sync(sheet);
+    expect(s).toMatchObject({ newRecords: 1, newPassports: 1, failedRows: 0 });
+    expect(queued).toContain("BTU-AI-000126");
   });
 });

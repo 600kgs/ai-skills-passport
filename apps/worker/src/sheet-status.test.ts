@@ -14,6 +14,7 @@ class FakeSheet implements SheetSource {
   constructor(public grid: string[][]) {}
   async read() { return this.grid.map((r) => [...r]); }
   async write(updates: CellUpdate[]) { this.writes.push(...updates); }
+  async insertRows() { throw new Error("not used here"); }
 }
 const sheetOf = (...rows: string[][]) => new FakeSheet([["BTU | TEST DATA"], [], [], HEADER, ...rows]);
 

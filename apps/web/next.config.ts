@@ -16,8 +16,12 @@ const nextConfig: NextConfig = {
   // workspace packages ship as typescript source
   transpilePackages: ["@passport/core", "@passport/db"],
   serverExternalPackages: ["pg", "pg-boss"],
-  // forbidden() for signed-in accounts that aren't admins
-  experimental: { authInterrupts: true },
+  experimental: {
+    // forbidden() for signed-in accounts that aren't admins
+    authInterrupts: true,
+    // excel uploads are capped at 1 MB; the form adds a little on top
+    serverActions: { bodySizeLimit: "2mb" },
+  },
   turbopack: {
     rules: {
       "*.css": {

@@ -11,6 +11,7 @@ const ACTIONS: Record<string, string> = {
   record_confirmed: "Confirmed",
   record_rejected: "Rejected",
   sync_requested: "Started a sync",
+  rows_imported: "Added rows from Excel file",
   ledger_reset: "Reset the ledger for a full reissue",
 };
 

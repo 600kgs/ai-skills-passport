@@ -1,11 +1,12 @@
 // background worker: applies db migrations, runs the job queue, and polls the sheet.
 import { fileURLToPath } from "node:url";
-import { ADMIN_QUEUE, type AdminJob, type AdminJobResult } from "@passport/core";
+import { ADMIN_QUEUE, type AdminJob, type ImportPreview, type ImportResult, type SyncResult } from "@passport/core";
 import { auditLog, createDb, syncRuns } from "@passport/db";
 import { runMigrations } from "@passport/db/migrate";
 import { PgBoss } from "pg-boss";
 import { solanaChain } from "./chain.ts";
 import { issuePassport, type IssueDeps } from "./issue.ts";
+import { planImport } from "./import.ts";
 import { gotenbergRenderer } from "./pdf/render.ts";
 import { setRecordStatus } from "./sheet-status.ts";
 import { googleSheet } from "./sheets.ts";
@@ -93,18 +94,38 @@ const timer = setInterval(tick, SYNC_EVERY_MS);
 
 // admin jobs fail fast instead of retrying: the admin sees the reason and decides
 await boss.createQueue(ADMIN_QUEUE, { retryLimit: 0 });
-await boss.work<AdminJob>(ADMIN_QUEUE, { pollingIntervalSeconds: 1 }, async ([job]): Promise<AdminJobResult> => {
-  const j = job!.data;
-  if (j.kind === "set-status") {
-    const { row } = await setRecordStatus(sheet, j.recordId, j.status);
-    await db.insert(auditLog).values({
-      actor: j.by, action: j.status === "CONFIRMED" ? "record_confirmed" : "record_rejected", subject: j.recordId, details: { row },
-    });
-  } else {
-    await db.insert(auditLog).values({ actor: j.by, action: "sync_requested" });
-  }
+const syncResult = async (): Promise<SyncResult> => {
   const s = (await sync("manual"))!;
   return { newRecords: s.newRecords, updatedRecords: s.updatedRecords, failedRows: s.failedRows, queued: s.queued.length };
+};
+await boss.work<AdminJob>(ADMIN_QUEUE, { pollingIntervalSeconds: 1 }, async ([job]): Promise<SyncResult | ImportPreview | ImportResult> => {
+  const j = job!.data;
+  switch (j.kind) {
+    case "set-status": {
+      const { row } = await setRecordStatus(sheet, j.recordId, j.status);
+      await db.insert(auditLog).values({
+        actor: j.by, action: j.status === "CONFIRMED" ? "record_confirmed" : "record_rejected", subject: j.recordId, details: { row },
+      });
+      return syncResult();
+    }
+    case "sync":
+      await db.insert(auditLog).values({ actor: j.by, action: "sync_requested" });
+      return syncResult();
+    case "import-preview":
+      return (await planImport(await sheet.read(), j.grid)).preview;
+    case "import-apply": {
+      // checked again against the sheet as it is now: it may have changed since the preview
+      const plan = await planImport(await sheet.read(), j.grid);
+      if (plan.preview.error) throw new Error(plan.preview.error);
+      if (!plan.valid.length) throw new Error("none of the rows in the file can be added");
+      await sheet.insertRows(plan.insertAt, plan.valid.map((r) => r.values));
+      const added = plan.valid.map((r) => r.recordId);
+      await db.insert(auditLog).values({
+        actor: j.by, action: "rows_imported", subject: j.fileName, details: { added, skipped: plan.preview.rows.length - added.length, atRow: plan.insertAt },
+      });
+      return { ...(await syncResult()), added, skipped: plan.preview.rows.length - added.length };
+    }
+  }
 });
 
 async function shutdown() {

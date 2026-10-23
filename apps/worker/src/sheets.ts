@@ -6,6 +6,8 @@ export type CellUpdate = { row: number; col: number; value: string }; // row 1-b
 export interface SheetSource {
   read(): Promise<string[][]>;
   write(updates: CellUpdate[]): Promise<void>;
+  // new rows pushed in at `beforeRow` (1-based); rows from there down, like btu's notes, move below them
+  insertRows(beforeRow: number, rows: string[][]): Promise<void>;
 }
 
 export const colLetter = (i: number) => {
@@ -17,16 +19,18 @@ export const colLetter = (i: number) => {
 export function googleSheet(sheetId: string, keyFile: string): SheetSource {
   const auth = new googleAuth.GoogleAuth({ keyFile, scopes: ["https://www.googleapis.com/auth/spreadsheets"] });
   const api = sheetsApi({ version: "v4", auth });
-  let tab: string | undefined;
+  let tab: { title: string; id: number } | undefined;
 
-  const tabName = async () => {
+  const firstTab = async () => {
     if (!tab) {
-      const meta = await api.spreadsheets.get({ spreadsheetId: sheetId, fields: "sheets.properties.title" });
-      tab = meta.data.sheets?.[0]?.properties?.title ?? undefined;
-      if (!tab) throw new Error("spreadsheet has no tabs");
+      const meta = await api.spreadsheets.get({ spreadsheetId: sheetId, fields: "sheets.properties(title,sheetId)" });
+      const p = meta.data.sheets?.[0]?.properties;
+      if (!p?.title || p.sheetId == null) throw new Error("spreadsheet has no tabs");
+      tab = { title: p.title, id: p.sheetId };
     }
     return tab;
   };
+  const tabName = async () => (await firstTab()).title;
 
   return {
     async read() {
@@ -44,6 +48,19 @@ export function googleSheet(sheetId: string, keyFile: string): SheetSource {
           data: updates.map((u) => ({ range: `'${t}'!${colLetter(u.col)}${u.row}`, values: [[u.value]] })),
         },
       });
+    },
+    async insertRows(beforeRow, rows) {
+      if (!rows.length) return;
+      const { title, id } = await firstTab();
+      await api.spreadsheets.batchUpdate({
+        spreadsheetId: sheetId,
+        requestBody: { requests: [{ insertDimension: {
+          range: { sheetId: id, dimension: "ROWS", startIndex: beforeRow - 1, endIndex: beforeRow - 1 + rows.length },
+          inheritFromBefore: true, // same formatting as the record above
+        } }] },
+      });
+      // raw, so a cell starting with "=" stays text and never runs as a formula
+      await api.spreadsheets.values.update({ spreadsheetId: sheetId, range: `'${title}'!A${beforeRow}`, valueInputOption: "RAW", requestBody: { values: rows } });
     },
   };
 }

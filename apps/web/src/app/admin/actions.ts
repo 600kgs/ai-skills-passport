@@ -1,11 +1,12 @@
 "use server";
 
+import type { SyncResult } from "@passport/core";
 import { currentAdmin } from "@/lib/auth";
 import { runAdminJob, type JobOutcome } from "@/lib/queue";
 
 export type ActionResult = { ok: boolean; message: string };
 
-const describe = (o: JobOutcome, done: string): ActionResult =>
+const describe = (o: JobOutcome<SyncResult>, done: string): ActionResult =>
   o.state === "done" ? { ok: true, message: done }
   : o.state === "failed" ? { ok: false, message: `The worker refused: ${o.error}.` }
   : { ok: true, message: "Sent. The worker hasn't answered yet; refresh in a few seconds." };
@@ -16,7 +17,7 @@ export async function decideRecord(recordId: string, status: "CONFIRMED" | "REJE
   if (!admin) return { ok: false, message: "Only admins can confirm or reject records." };
   if (!/^REC-\d+$/.test(recordId) || !["CONFIRMED", "REJECTED"].includes(status)) return { ok: false, message: "That isn't a valid record or decision." };
 
-  const outcome = await runAdminJob({ kind: "set-status", recordId, status, by: admin.email });
+  const outcome = await runAdminJob<SyncResult>({ kind: "set-status", recordId, status, by: admin.email });
   if (outcome.state === "done" && status === "CONFIRMED") {
     return describe(outcome, outcome.result.queued
       ? `Confirmed ${recordId}. The passport is being reissued with it now.`
@@ -28,7 +29,7 @@ export async function decideRecord(recordId: string, status: "CONFIRMED" | "REJE
 export async function syncNow(): Promise<ActionResult> {
   const admin = await currentAdmin();
   if (!admin) return { ok: false, message: "Only admins can start a sync." };
-  const outcome = await runAdminJob({ kind: "sync", by: admin.email });
+  const outcome = await runAdminJob<SyncResult>({ kind: "sync", by: admin.email });
   if (outcome.state !== "done") return describe(outcome, "");
   const r = outcome.result;
   return describe(outcome, r.newRecords || r.updatedRecords

@@ -2,9 +2,11 @@
 // we issued; anything else was written by someone holding an issuer key, or is left over from a
 // full reissue. run where the database is (on the server, in the worker container):
 //   docker compose run --rm worker node --import tsx scripts/audit-chain.ts           (report only)
-//   docker compose run --rm worker node --import tsx scripts/audit-chain.ts --close   (closes the unknown ones)
+//   docker compose run --rm worker node --import tsx scripts/audit-chain.ts --close   (closes the foreign ones)
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { attestationAddressFor, authorizedSigners, listAttestations } from "@passport/core";
+import { attestationAddressFor, authorizedSigners, listAttestations, toHex } from "@passport/core";
 import { createDb, passportVersions } from "@passport/db";
 import { address } from "@solana/kit";
 import { getCloseAttestationInstruction } from "sas-lib";
@@ -35,6 +37,12 @@ const onChain = await listAttestations(rpcUrl, authority);
 const chainAddresses = new Set(onChain.map((a) => a.address));
 const unknown = onChain.filter((a) => !known.has(a.address));
 const missing = [...known].filter(([addr, v]) => v.state === "issued" && !chainAddresses.has(addr));
+// a record we hold the pdf for is ours even if the ledger lost it (say, restored from an older backup).
+// those are never closed: closing one would turn a real passport into "unknown code" for good
+const pdfDir = join(env("STORAGE_DIR"), "pdfs");
+const weHoldPdf = (a: (typeof onChain)[number]) => existsSync(join(pdfDir, `${toHex(a.pdfSha256)}.pdf`));
+const ours = unknown.filter(weHoldPdf);
+const foreign = unknown.filter((a) => !weHoldPdf(a));
 
 const bySigner = (list: typeof onChain) => {
   const n = new Map<string, number>();
@@ -44,26 +52,31 @@ const bySigner = (list: typeof onChain) => {
 console.log(`ledger:   ${versions.length} versions, ${versions.filter((v) => v.state === "issued").length} issued`);
 console.log(`on chain: ${onChain.length} attestations, signed by ${bySigner(onChain) || "nobody"}`);
 console.log(`authorized now: ${(await authorizedSigners(rpcUrl, authority)).join(", ")}`);
-console.log(`\nnot in the ledger: ${unknown.length}${unknown.length ? `, signed by ${bySigner(unknown)}` : ""}`);
-for (const a of unknown.slice(0, 20)) console.log(`  ${a.address}  V${a.version}  signer ${a.signer}`);
-if (unknown.length > 20) console.log(`  ...and ${unknown.length - 20} more`);
+const list = (items: typeof onChain) => {
+  for (const a of items.slice(0, 20)) console.log(`  ${a.address}  V${a.version}  signer ${a.signer}`);
+  if (items.length > 20) console.log(`  ...and ${items.length - 20} more`);
+};
+console.log(`\nnot in the ledger, no pdf of ours (foreign or leftover): ${foreign.length}${foreign.length ? `, signed by ${bySigner(foreign)}` : ""}`);
+list(foreign);
+console.log(`not in the ledger, but we hold its pdf (ours; restore the ledger, never close): ${ours.length}`);
+list(ours);
 console.log(`issued but missing on chain: ${missing.length}`);
 for (const [addr, v] of missing) console.log(`  ${v.passportId} V${v.versionNo} (${v.code}) should be at ${addr}`);
 
 let closed = 0;
-if (process.argv.includes("--close") && unknown.length) {
+if (process.argv.includes("--close") && foreign.length) {
   // an empty ledger would make every real record look unknown
   if (!versions.some((v) => v.state === "issued")) throw new Error("refusing: the ledger has no issued versions");
   const issuer = await loadSigner(env("ISSUER_KEY_FILE"));
   const { credential } = await credentialAddresses(address(authority));
   const { send } = txTools(rpcUrl);
-  console.log(`\nclosing ${unknown.length} with ${issuer.address}; their rent goes back to it`);
-  for (let i = 0; i < unknown.length; i += CLOSE_PER_TX) {
-    const batch = unknown.slice(i, i + CLOSE_PER_TX);
+  console.log(`\nclosing ${foreign.length} with ${issuer.address}; their rent goes back to it`);
+  for (let i = 0; i < foreign.length; i += CLOSE_PER_TX) {
+    const batch = foreign.slice(i, i + CLOSE_PER_TX);
     const sig = await send(batch.map((a) => getCloseAttestationInstruction({ payer: issuer, authority: issuer, credential, attestation: address(a.address) })), issuer);
     closed += batch.length;
-    console.log(`  closed ${closed}/${unknown.length}  ${sig}`);
+    console.log(`  closed ${closed}/${foreign.length}  ${sig}`);
   }
 }
 // non-zero while something is still off, so it can gate a deploy or a cron alert
-process.exit(unknown.length - closed || missing.length ? 1 : 0);
+process.exit(foreign.length - closed || ours.length || missing.length ? 1 : 0);

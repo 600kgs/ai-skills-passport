@@ -28,7 +28,7 @@ const tx = (sig: string) => `https://explorer.solana.com/tx/${sig}?cluster=devne
 
 const confirmed = process.argv.includes("--yes");
 const rpcUrl = env("SOLANA_RPC_URL");
-const { rpc, send, simulate } = txTools(rpcUrl, env("SOLANA_WS_URL"));
+const { rpc, send, simulate } = txTools(rpcUrl);
 const currentFile = root(env("ISSUER_KEY_FILE").replace(/^\.\//, ""));
 const nextFile = currentFile.replace(/\.json$/, ".next.json");
 const balance = async (k: KeyPairSigner) => (await rpc.getBalance(k.address).send()).value;

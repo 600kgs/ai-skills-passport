@@ -50,17 +50,20 @@ if (unknown.length > 20) console.log(`  ...and ${unknown.length - 20} more`);
 console.log(`issued but missing on chain: ${missing.length}`);
 for (const [addr, v] of missing) console.log(`  ${v.passportId} V${v.versionNo} (${v.code}) should be at ${addr}`);
 
+let closed = 0;
 if (process.argv.includes("--close") && unknown.length) {
   // an empty ledger would make every real record look unknown
   if (!versions.some((v) => v.state === "issued")) throw new Error("refusing: the ledger has no issued versions");
   const issuer = await loadSigner(env("ISSUER_KEY_FILE"));
   const { credential } = await credentialAddresses(address(authority));
-  const { send } = txTools(rpcUrl, env("SOLANA_WS_URL"));
+  const { send } = txTools(rpcUrl);
   console.log(`\nclosing ${unknown.length} with ${issuer.address}; their rent goes back to it`);
   for (let i = 0; i < unknown.length; i += CLOSE_PER_TX) {
     const batch = unknown.slice(i, i + CLOSE_PER_TX);
     const sig = await send(batch.map((a) => getCloseAttestationInstruction({ payer: issuer, authority: issuer, credential, attestation: address(a.address) })), issuer);
-    console.log(`  closed ${i + batch.length}/${unknown.length}  ${sig}`);
+    closed += batch.length;
+    console.log(`  closed ${closed}/${unknown.length}  ${sig}`);
   }
 }
-process.exit(unknown.length || missing.length ? 1 : 0);
+// non-zero while something is still off, so it can gate a deploy or a cron alert
+process.exit(unknown.length - closed || missing.length ? 1 : 0);

@@ -41,10 +41,10 @@ export function transferIx(from: KeyPairSigner, to: Address, lamports: bigint): 
   } as Instruction;
 }
 
-// for the admin scripts: send instructions, or only simulate them (nothing is written, no fee)
-export function txTools(rpcUrl: string, wsUrl: string) {
+// for the admin scripts: send instructions, or only simulate them (nothing is written, no fee).
+// confirms by polling over http: devnet's public websocket drops connections now and then
+export function txTools(rpcUrl: string) {
   const rpc = createSolanaRpc(rpcUrl);
-  const sendAndConfirm = sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions: createSolanaRpcSubscriptions(wsUrl) });
   const build = async (ixs: Instruction[], payer: KeyPairSigner) => {
     const { value: blockhash } = await rpc.getLatestBlockhash().send();
     return signTransactionMessageWithSigners(pipe(
@@ -58,8 +58,16 @@ export function txTools(rpcUrl: string, wsUrl: string) {
     rpc,
     async send(ixs: Instruction[], payer: KeyPairSigner) {
       const tx = await build(ixs, payer);
-      await sendAndConfirm(tx as Parameters<typeof sendAndConfirm>[0], { commitment: "confirmed" });
-      return getSignatureFromTransaction(tx);
+      const signature = getSignatureFromTransaction(tx);
+      await rpc.sendTransaction(getBase64EncodedWireTransaction(tx), { encoding: "base64", preflightCommitment: "confirmed" }).send();
+      // a blockhash lives ~60-90 s; past that the transaction can't land anymore
+      for (const end = Date.now() + 90_000; Date.now() < end;) {
+        await new Promise((r) => setTimeout(r, 1500));
+        const [status] = (await rpc.getSignatureStatuses([signature]).send()).value;
+        if (status?.err) throw new Error(`transaction ${signature} failed: ${JSON.stringify(status.err, (_, v) => (typeof v === "bigint" ? Number(v) : v))}`);
+        if (status?.confirmationStatus === "confirmed" || status?.confirmationStatus === "finalized") return signature;
+      }
+      throw new Error(`transaction ${signature} wasn't confirmed in 90 s; check it on the explorer before retrying`);
     },
     async simulate(ixs: Instruction[], payer: KeyPairSigner) {
       const tx = await build(ixs, payer);

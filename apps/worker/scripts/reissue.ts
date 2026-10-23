@@ -71,6 +71,8 @@ if (activeJobs > 0) {
     await tx.execute(sql`insert into audit_log (actor, action, details) values ('system', 'ledger_reset', ${JSON.stringify(stats)}::jsonb)`);
   });
   console.log("wiped. start the worker; the next sync reissues everything");
+  // the old versions' attestations stay on chain and still match their old pdfs until they're closed
+  console.log("once the reissue is done, close the old attestations: scripts/audit-chain.ts --close");
 }
 await pool.end();
 process.exit(exitCode);

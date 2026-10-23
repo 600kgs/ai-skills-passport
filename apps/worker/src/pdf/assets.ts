@@ -1,5 +1,5 @@
 // btu's official stamp and sticker artwork (Visual Reference, 2026-10-22) as png files in ./art,
-// sent to the renderer next to the html. the asterisk, icons and logo are redrawn as svg.
+// sent to the renderer next to the html, with btu's logo svg from btu.edu.ge. the asterisk and icons are redrawn as svg.
 import type { Category } from "@passport/core";
 
 const ORANGE = "#ff6a00";
@@ -7,6 +7,7 @@ const ORANGE = "#ff6a00";
 export const ART_FILES = [
   "stamp-skill.png", "stamp-applied.png", "stamp-advanced.png",
   "sticker-issued.png", "sticker-latest.png", "sticker-badge.png", "sticker-triangle.png", "sticker-blockchain.png",
+  "btu-logo.svg",
 ];
 
 const svg = (viewBox: string, widthMm: number, body: string, cls = "art") =>
@@ -38,15 +39,17 @@ export const icon = (name: keyof typeof ICONS, widthMm = 7) =>
 // mkhedruli to mtavruli (georgian capitals), as on btu's logo
 const mtavruli = (s: string) => s.replace(/[ა-ჺ]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x0bc0));
 
-// btu's logo: wordmark, divider, georgian name, and the striped chevron under it
-export function btuLogo(widthMm = 34): string {
-  const stripes = Array.from({ length: 6 }, (_, i) => `<polyline points="-2,${21 + i * 3.4} 19,${31 + i * 3.4} 40,${21 + i * 3.4}" fill="none" stroke="#111" stroke-width="1.7"/>`).join("");
-  return svg("0 0 104 48", widthMm, `
-    <text x="0" y="17" font-size="21" font-weight="900" fill="#111" textLength="38" lengthAdjust="spacingAndGlyphs">BTU</text>
-    <rect x="41.5" y="2.5" width="1" height="15" fill="#111"/>
-    ${["ბიზნესისა და", "ტექნოლოგიების", "უნივერსიტეტი"].map((l, i) => `<text x="45" y="${7 + i * 5.2}" font-size="4.6" font-weight="700" fill="#111">${mtavruli(l)}</text>`).join("")}
-    <clipPath id="btu-shield"><path d="M0 20.5h38v13l-19 13-19-13z"/></clipPath>
-    <g clip-path="url(#btu-shield)">${stripes}</g>`, "art logo");
+// btu's logo: the official wordmark and emblem (art/btu-logo.svg, from btu.edu.ge), then a divider
+// and the georgian name, set in our font since btu's typeface isn't available.
+// the svg's letters are 3027 units wide; scaled to 38 here, with their top at y=2
+const LOGO_SCALE = 38 / 3027;
+// 21.9 makes the logo (B top to emblem tip, 53 units) as tall as the orange footer block, as in the mockup
+export function btuLogo(widthMm = 21.9): string {
+  // the emblem starts a little left of the B and reaches well below the text, hence the wider box
+  return svg("-3.5 0 107.5 56", (widthMm * 107.5) / 104, `
+    <image href="btu-logo.svg" x="${(-238 * LOGO_SCALE).toFixed(3)}" y="2" width="${(3491 * LOGO_SCALE).toFixed(3)}" height="${(4227 * LOGO_SCALE).toFixed(3)}"/>
+    <rect x="41.5" y="2" width="1" height="15.6" fill="#111"/>
+    ${["ბიზნესისა და", "ტექნოლოგიების", "უნივერსიტეტი"].map((l, i) => `<text x="45" y="${(5.4 + i * 6.1).toFixed(1)}" font-size="4.6" font-weight="700" fill="#111">${mtavruli(l)}</text>`).join("")}`, "art logo");
 }
 
 // the cover's sticker cluster, placed in mm as in the mockup. later images sit on top

@@ -23,6 +23,8 @@ ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 PORT=3000
 WORKDIR /repo/apps/web/.next/standalone
 COPY --from=build --chown=node:node /repo/apps/web/.next/standalone ./
 COPY --from=build --chown=node:node /repo/apps/web/.next/static ./apps/web/.next/static
+# standalone leaves public/ out too (logo, stickers); the server serves it from next to server.js
+COPY --from=build --chown=node:node /repo/apps/web/public ./apps/web/public
 USER node
 EXPOSE 3000
 CMD ["node", "apps/web/server.js"]

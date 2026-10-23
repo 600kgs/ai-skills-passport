@@ -3,27 +3,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const LINKS = [
-  { href: "/admin", label: "Overview" },
-  { href: "/admin/passports", label: "Passports" },
-  { href: "/admin/upload", label: "Upload" },
-  { href: "/admin/activity", label: "Activity" },
-] as const;
+type Labels = { overview: string; passports: string; upload: string; activity: string };
 
-export function AdminNav() {
+export function AdminNav({ labels, label }: { labels: Labels; label: string }) {
   const path = usePathname();
+  const links = [
+    { href: "/admin", label: labels.overview },
+    { href: "/admin/passports", label: labels.passports },
+    { href: "/admin/upload", label: labels.upload },
+    { href: "/admin/activity", label: labels.activity },
+  ];
   return (
-    <nav aria-label="Admin">
-      <ul className="flex flex-wrap gap-x-6 gap-y-2 text-lg">
-        {LINKS.map((l) => {
+    <nav aria-label={label} className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+      <ul className="flex gap-1">
+        {links.map((l) => {
           const current = path === l.href;
           return (
             <li key={l.href}>
-              <Link
-                href={l.href}
-                aria-current={current ? "page" : undefined}
-                className={`focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground ${current ? "font-black underline decoration-btu-orange decoration-4 underline-offset-8" : "hover:underline"}`}
-              >
+              <Link href={l.href} aria-current={current ? "page" : undefined}
+                className={`block whitespace-nowrap px-4 pt-3 pb-2 font-display text-2xl ${current ? "bg-white text-magenta" : "text-ink hover:bg-white/60"}`}>
                 {l.label}
               </Link>
             </li>

@@ -1,67 +1,44 @@
-import { Suspense } from "react";
+import { fill, formatDateTime } from "@/i18n/format";
+import { getDict } from "@/i18n/server";
 import { activity } from "@/lib/admin";
-import { dateTime } from "../format";
 import { requireAdmin } from "../guard";
 
-const ACTIONS: Record<string, string> = {
-  passport_created: "Created passport",
-  award_recorded: "Recorded skill",
-  award_updated: "Record changed in the sheet",
-  version_issued: "Issued version",
-  record_confirmed: "Confirmed",
-  record_rejected: "Rejected",
-  sync_requested: "Started a sync",
-  rows_imported: "Added rows from Excel file",
-  ledger_reset: "Reset the ledger for a full reissue",
-};
-
-export default function AdminActivityPage() {
-  return (
-    <main>
-      <Suspense fallback={<p className="mt-10 text-muted">Loading...</p>}>
-        <Activity />
-      </Suspense>
-    </main>
-  );
-}
-
-async function Activity() {
+export default async function AdminActivityPage() {
   await requireAdmin();
-  const { runs, audit } = await activity();
+  const [d, { runs, audit }] = await Promise.all([getDict(), activity()]);
+  const t = d.admin.activity;
+  const rows = (n: number) => (n === 1 ? d.admin.rowOne : d.admin.rowMany);
 
   return (
     <div className="mt-10 grid gap-14 lg:grid-cols-2">
       <section aria-labelledby="audit-h">
-        <h1 id="audit-h" className="border-b-2 border-foreground pb-2 text-2xl font-black">Who did what</h1>
-        <p className="mt-3 text-sm text-muted">The latest 60 entries. &quot;system&quot; is the worker acting on the sheet.</p>
-        <ol className="mt-2">
+        <h2 id="audit-h" className="border-b-4 border-blue pb-2 font-display text-4xl text-ink">{t.auditTitle}</h2>
+        <p className="mt-3 text-sm text-muted">{t.auditNote}</p>
+        <ol className="mt-2 divide-y divide-line">
           {audit.map((a) => (
-            <li key={a.id} className="border-b border-line py-3">
-              <p>
-                <b className="font-black">{ACTIONS[a.action] ?? a.action}</b>
-                {a.subject && <> {a.subject}</>}
-              </p>
-              <p className="text-sm text-muted">{dateTime(a.at)}, {a.actor}</p>
+            <li key={a.id} className="py-3">
+              <p><b className="text-ink">{t.actions[a.action] ?? a.action}</b>{a.subject && <> {a.subject}</>}</p>
+              <p className="text-sm text-muted">{formatDateTime(d.locale, a.at)}, {a.actor}</p>
             </li>
           ))}
         </ol>
       </section>
 
       <section aria-labelledby="runs-h">
-        <h2 id="runs-h" className="border-b-2 border-foreground pb-2 text-2xl font-black">Syncs that changed something</h2>
-        <p className="mt-3 text-sm text-muted">Quiet checks of the sheet aren&apos;t listed. A sync an admin starts always is.</p>
-        <ol className="mt-2">
+        <h2 id="runs-h" className="border-b-4 border-blue pb-2 font-display text-4xl text-ink">{t.runsTitle}</h2>
+        <p className="mt-3 text-sm text-muted">{t.runsNote}</p>
+        <ol className="mt-2 divide-y divide-line">
           {runs.map((r) => (
-            <li key={r.id} className="border-b border-line py-3">
+            <li key={r.id} className="py-3">
               {r.error ? (
-                <p className="border-l-4 border-btu-red pl-3"><b className="font-black">Failed:</b> {r.error}</p>
+                <p className="border-l-8 border-magenta pl-3"><b className="text-ink">{t.failed}</b> {r.error}</p>
               ) : (
                 <p>
-                  <b className="font-black">{r.newRecords ?? 0} new</b>
-                  {(r.failedRecords ?? 0) > 0 && <>, <span className="text-btu-red">{r.failedRecords} rows to fix</span></>}
+                  <b className="text-ink">{fill(t.newCount, { n: r.newRecords ?? 0 })}</b>
+                  {(r.failedRecords ?? 0) > 0 && <>, <span className="font-semibold text-magenta">{fill(t.toFix, { n: r.failedRecords!, rows: rows(r.failedRecords!) })}</span></>}
                 </p>
               )}
-              <p className="text-sm text-muted">{dateTime(r.finishedAt ?? r.startedAt)}, {r.trigger === "manual" ? "started by an admin" : "automatic"}</p>
+              <p className="text-sm text-muted">{formatDateTime(d.locale, r.finishedAt ?? r.startedAt)}, {r.trigger === "manual" ? t.byAdmin : t.automatic}</p>
             </li>
           ))}
         </ol>

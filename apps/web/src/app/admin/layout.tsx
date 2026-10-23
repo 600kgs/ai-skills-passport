@@ -1,18 +1,21 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { getDict } from "@/i18n/server";
 import { AdminNav } from "./nav";
 
 export const metadata: Metadata = { title: "Admin | BTU AI Skills Digital Passport", robots: { index: false } };
 
 // only the frame: every page checks the admin itself
-export default function AdminLayout({ children }: LayoutProps<"/admin">) {
+export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
+  const t = (await getDict()).admin;
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-12">
-      <header className="flex flex-col gap-6 border-b-2 border-foreground pb-5 sm:flex-row sm:items-end sm:justify-between">
-        <Link href="/admin" className="font-display text-4xl text-ink">Admin</Link>
-        <AdminNav />
-      </header>
-      {children}
-    </div>
+    <>
+      <div className="bg-panel">
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 pt-16 pb-0 sm:flex-row sm:items-end sm:justify-between sm:pt-20">
+          <h1 className="pb-3 font-display text-5xl text-ink">{t.title}</h1>
+          <AdminNav labels={t.tabs} label={t.title} />
+        </div>
+      </div>
+      <div className="mx-auto w-full max-w-6xl px-4 pb-16">{children}</div>
+    </>
   );
 }

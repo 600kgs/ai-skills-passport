@@ -1,38 +1,37 @@
 "use server";
 
 import type { SyncResult } from "@passport/core";
+import { fill } from "@/i18n/format";
+import { getDict } from "@/i18n/server";
 import { currentAdmin } from "@/lib/auth";
 import { runAdminJob, type JobOutcome } from "@/lib/queue";
 
 export type ActionResult = { ok: boolean; message: string };
 
-const describe = (o: JobOutcome<SyncResult>, done: string): ActionResult =>
-  o.state === "done" ? { ok: true, message: done }
-  : o.state === "failed" ? { ok: false, message: `The worker refused: ${o.error}.` }
-  : { ok: true, message: "Sent. The worker hasn't answered yet; refresh in a few seconds." };
-
 // server actions are public endpoints, so each one checks the admin itself
 export async function decideRecord(recordId: string, status: "CONFIRMED" | "REJECTED"): Promise<ActionResult> {
+  const t = (await getDict()).admin.actions;
   const admin = await currentAdmin();
-  if (!admin) return { ok: false, message: "Only admins can confirm or reject records." };
-  if (!/^REC-\d+$/.test(recordId) || !["CONFIRMED", "REJECTED"].includes(status)) return { ok: false, message: "That isn't a valid record or decision." };
+  if (!admin) return { ok: false, message: t.onlyAdmins };
+  if (!/^REC-\d+$/.test(recordId) || !["CONFIRMED", "REJECTED"].includes(status)) return { ok: false, message: t.invalid };
 
   const outcome = await runAdminJob<SyncResult>({ kind: "set-status", recordId, status, by: admin.email });
-  if (outcome.state === "done" && status === "CONFIRMED") {
-    return describe(outcome, outcome.result.queued
-      ? `Confirmed ${recordId}. The passport is being reissued with it now.`
-      : `Confirmed ${recordId}.`);
-  }
-  return describe(outcome, `Rejected ${recordId}. It stays out of the passport.`);
+  if (outcome.state !== "done") return notDone(outcome, t);
+  if (status === "REJECTED") return { ok: true, message: fill(t.rejected, { rec: recordId }) };
+  return { ok: true, message: fill(outcome.result.queued ? t.confirmedIssuing : t.confirmed, { rec: recordId }) };
 }
 
 export async function syncNow(): Promise<ActionResult> {
+  const d = await getDict();
+  const t = d.admin.actions;
   const admin = await currentAdmin();
-  if (!admin) return { ok: false, message: "Only admins can start a sync." };
+  if (!admin) return { ok: false, message: t.onlyAdmins };
   const outcome = await runAdminJob<SyncResult>({ kind: "sync", by: admin.email });
-  if (outcome.state !== "done") return describe(outcome, "");
+  if (outcome.state !== "done") return notDone(outcome, t);
   const r = outcome.result;
-  return describe(outcome, r.newRecords || r.updatedRecords
-    ? `Synced: ${r.newRecords} new and ${r.updatedRecords} changed records${r.failedRows ? `, ${r.failedRows} rows need fixing` : ""}.`
-    : `Synced. Nothing new in the sheet${r.failedRows ? `; ${r.failedRows} rows still need fixing` : ""}.`);
+  const fix = r.failedRows ? fill(t.needFix, { n: r.failedRows, rows: r.failedRows === 1 ? d.admin.rowOne : d.admin.rowMany }) : "";
+  return { ok: true, message: (r.newRecords || r.updatedRecords ? fill(t.synced, { new: r.newRecords, changed: r.updatedRecords }) : t.syncedNothing) + fix };
 }
+
+const notDone = (o: Exclude<JobOutcome<SyncResult>, { state: "done" }>, t: Awaited<ReturnType<typeof getDict>>["admin"]["actions"]): ActionResult =>
+  o.state === "failed" ? { ok: false, message: fill(t.refused, { error: o.error }) } : { ok: true, message: t.waiting };

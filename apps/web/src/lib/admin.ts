@@ -1,4 +1,5 @@
 import "server-only";
+import { authorizedSigners } from "@passport/core";
 import { auditLog, desc, eq, passports, passportVersions, skillAwards, sql, students, syncRuns } from "@passport/db";
 import { getDb } from "@/lib/db";
 
@@ -14,15 +15,25 @@ export async function overview() {
            (select count(*) from passport_versions where state = 'failed')::int as failed`)).rows;
   const [lastRun] = await db.select().from(syncRuns).orderBy(desc(syncRuns.id)).limit(1);
   const [lastProblems] = await db.select().from(syncRuns).where(sql`${syncRuns.error} is null`).orderBy(desc(syncRuns.id)).limit(1);
-  const [latest] = await db.select({ signer: passportVersions.signer }).from(passportVersions)
-    .where(eq(passportVersions.state, "issued")).orderBy(desc(passportVersions.issuedAt)).limit(1);
-  const balance = latest?.signer ? await solBalance(latest.signer) : null;
+  // the key the chain accepts right now, not whoever signed last: right after a rotation they differ
+  const signer = await currentSigner();
+  const balance = signer ? await solBalance(signer) : null;
   return {
     counts: counts!,
     lastRun: lastRun ?? null,
     problems: lastProblems?.problems ?? [],
-    issuer: latest?.signer ? { address: latest.signer, balance, issuesLeft: balance === null ? null : Math.floor(balance / SOL_PER_ISSUE) } : null,
+    issuer: signer ? { address: signer, balance, issuesLeft: balance === null ? null : Math.floor(balance / SOL_PER_ISSUE) } : null,
   };
+}
+
+async function currentSigner(): Promise<string | null> {
+  const authority = process.env.AUTHORITY_ADDRESS;
+  if (!authority) return null;
+  try {
+    return (await authorizedSigners(process.env.SOLANA_RPC_URL ?? "https://api.devnet.solana.com", authority))[0] ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // records waiting for someone at btu to confirm or reject them

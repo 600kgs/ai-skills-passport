@@ -39,13 +39,19 @@ async function Overview() {
           <p className="text-lg text-muted">
             {!lastRun ? "No sync has run yet."
               : lastRun.error ? <>Last sync failed {ago(lastRun.finishedAt ?? lastRun.startedAt)}: {lastRun.error}</>
-              : <>Last change from the sheet {ago(lastRun.finishedAt ?? lastRun.startedAt)}. The worker checks the sheet every 15 seconds.</>}
+              : <>
+                {lastRun.trigger === "manual" ? "Last sync, started by an admin," : "Last change from the sheet"} {ago(lastRun.finishedAt ?? lastRun.startedAt)}.
+                The worker checks the sheet every 15 seconds on its own.
+              </>}
           </p>
           {issuer && (
             <p className={`text-lg ${issuer.issuesLeft !== null && issuer.issuesLeft < LOW_BALANCE_ISSUES ? "border-l-4 border-btu-red pl-4" : "text-muted"}`}>
               {issuer.balance === null
                 ? "Couldn't read the issuer wallet's balance from Solana."
-                : <>The issuer wallet holds {issuer.balance.toFixed(3)} SOL, enough for about {issuer.issuesLeft} more issues.</>}
+                : <>
+                  The signing key the chain accepts now, <span className="font-bold">{issuer.address.slice(0, 4)}...{issuer.address.slice(-4)}</span>,
+                  holds {issuer.balance.toFixed(3)} SOL, enough for about {issuer.issuesLeft} more issues.
+                </>}
             </p>
           )}
         </div>

@@ -2,10 +2,10 @@
 // same calls as spikes/sas, with the issuer key as both signer and fee payer.
 import { readFileSync } from "node:fs";
 import {
-  address, appendTransactionMessageInstructions, createKeyPairSignerFromPrivateKeyBytes, createSolanaRpc,
-  createSolanaRpcSubscriptions, createTransactionMessage, getAddressDecoder, getSignatureFromTransaction, pipe,
+  AccountRole, address, appendTransactionMessageInstructions, createKeyPairSignerFromPrivateKeyBytes, createSolanaRpc,
+  createSolanaRpcSubscriptions, createTransactionMessage, getAddressDecoder, getBase64EncodedWireTransaction, getSignatureFromTransaction, pipe,
   sendAndConfirmTransactionFactory, setTransactionMessageFeePayerSigner, setTransactionMessageLifetimeUsingBlockhash,
-  signTransactionMessageWithSigners, type Address, type KeyPairSigner,
+  signTransactionMessageWithSigners, type Address, type Instruction, type KeyPairSigner,
 } from "@solana/kit";
 import {
   deriveAttestationPda, deserializeAttestationData, fetchMaybeAttestation,
@@ -27,6 +27,47 @@ export async function loadSigner(keyFile: string): Promise<KeyPairSigner> {
 }
 
 export const credentialAddresses = (authority: Address) => issuerAddresses(authority);
+
+// system program transfer: instruction index 2 (u32 le) + lamports (u64 le)
+export function transferIx(from: KeyPairSigner, to: Address, lamports: bigint): Instruction {
+  const data = new Uint8Array(12);
+  const view = new DataView(data.buffer);
+  view.setUint32(0, 2, true);
+  view.setBigUint64(4, lamports, true);
+  return {
+    programAddress: address("11111111111111111111111111111111"),
+    accounts: [{ address: from.address, role: AccountRole.WRITABLE_SIGNER, signer: from }, { address: to, role: AccountRole.WRITABLE }],
+    data,
+  } as Instruction;
+}
+
+// for the admin scripts: send instructions, or only simulate them (nothing is written, no fee)
+export function txTools(rpcUrl: string, wsUrl: string) {
+  const rpc = createSolanaRpc(rpcUrl);
+  const sendAndConfirm = sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions: createSolanaRpcSubscriptions(wsUrl) });
+  const build = async (ixs: Instruction[], payer: KeyPairSigner) => {
+    const { value: blockhash } = await rpc.getLatestBlockhash().send();
+    return signTransactionMessageWithSigners(pipe(
+      createTransactionMessage({ version: 0 }),
+      (m) => setTransactionMessageFeePayerSigner(payer, m),
+      (m) => setTransactionMessageLifetimeUsingBlockhash(blockhash, m),
+      (m) => appendTransactionMessageInstructions(ixs, m),
+    ));
+  };
+  return {
+    rpc,
+    async send(ixs: Instruction[], payer: KeyPairSigner) {
+      const tx = await build(ixs, payer);
+      await sendAndConfirm(tx as Parameters<typeof sendAndConfirm>[0], { commitment: "confirmed" });
+      return getSignatureFromTransaction(tx);
+    },
+    async simulate(ixs: Instruction[], payer: KeyPairSigner) {
+      const tx = await build(ixs, payer);
+      const { value } = await rpc.simulateTransaction(getBase64EncodedWireTransaction(tx), { encoding: "base64", commitment: "confirmed" }).send();
+      return { ok: value.err === null, err: value.err, logs: value.logs ?? [] };
+    },
+  };
+}
 
 export async function solanaChain(cfg: { rpcUrl: string; wsUrl: string; issuerKeyFile: string; authorityAddress: string }): Promise<Chain> {
   const rpc = createSolanaRpc(cfg.rpcUrl);

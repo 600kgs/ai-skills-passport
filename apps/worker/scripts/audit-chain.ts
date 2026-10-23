@@ -1,0 +1,66 @@
+// compares the chain with the ledger. every attestation under our credential should be a version
+// we issued; anything else was written by someone holding an issuer key, or is left over from a
+// full reissue. run where the database is (on the server, in the worker container):
+//   docker compose run --rm worker node --import tsx scripts/audit-chain.ts           (report only)
+//   docker compose run --rm worker node --import tsx scripts/audit-chain.ts --close   (closes the unknown ones)
+import { fileURLToPath } from "node:url";
+import { attestationAddressFor, authorizedSigners, listAttestations } from "@passport/core";
+import { createDb, passportVersions } from "@passport/db";
+import { address } from "@solana/kit";
+import { getCloseAttestationInstruction } from "sas-lib";
+import { credentialAddresses, loadSigner, txTools } from "../src/chain.ts";
+
+const root = (p: string) => fileURLToPath(new URL(`../../../${p}`, import.meta.url));
+try {
+  process.loadEnvFile(root(".env"));
+} catch {} // in production the env comes from docker
+const env = (name: string) => {
+  const v = process.env[name];
+  if (!v) throw new Error(`${name} is not set`);
+  return v.startsWith(".") ? root(v) : v;
+};
+const CLOSE_PER_TX = 5;
+
+const authority = env("AUTHORITY_ADDRESS");
+const rpcUrl = env("SOLANA_RPC_URL");
+const { db, pool } = createDb(env("DATABASE_URL"));
+const versions = await db.select({
+  code: passportVersions.verificationCode, passportId: passportVersions.passportId, versionNo: passportVersions.versionNo, state: passportVersions.state,
+}).from(passportVersions);
+await pool.end();
+
+// every code in the ledger, in any state: an issue in progress has its address before its chain write lands
+const known = new Map(await Promise.all(versions.map(async (v) => [await attestationAddressFor(authority, v.code), v] as const)));
+const onChain = await listAttestations(rpcUrl, authority);
+const chainAddresses = new Set(onChain.map((a) => a.address));
+const unknown = onChain.filter((a) => !known.has(a.address));
+const missing = [...known].filter(([addr, v]) => v.state === "issued" && !chainAddresses.has(addr));
+
+const bySigner = (list: typeof onChain) => {
+  const n = new Map<string, number>();
+  for (const a of list) n.set(a.signer, (n.get(a.signer) ?? 0) + 1);
+  return [...n].map(([s, c]) => `${s} (${c})`).join(", ");
+};
+console.log(`ledger:   ${versions.length} versions, ${versions.filter((v) => v.state === "issued").length} issued`);
+console.log(`on chain: ${onChain.length} attestations, signed by ${bySigner(onChain) || "nobody"}`);
+console.log(`authorized now: ${(await authorizedSigners(rpcUrl, authority)).join(", ")}`);
+console.log(`\nnot in the ledger: ${unknown.length}${unknown.length ? `, signed by ${bySigner(unknown)}` : ""}`);
+for (const a of unknown.slice(0, 20)) console.log(`  ${a.address}  V${a.version}  signer ${a.signer}`);
+if (unknown.length > 20) console.log(`  ...and ${unknown.length - 20} more`);
+console.log(`issued but missing on chain: ${missing.length}`);
+for (const [addr, v] of missing) console.log(`  ${v.passportId} V${v.versionNo} (${v.code}) should be at ${addr}`);
+
+if (process.argv.includes("--close") && unknown.length) {
+  // an empty ledger would make every real record look unknown
+  if (!versions.some((v) => v.state === "issued")) throw new Error("refusing: the ledger has no issued versions");
+  const issuer = await loadSigner(env("ISSUER_KEY_FILE"));
+  const { credential } = await credentialAddresses(address(authority));
+  const { send } = txTools(rpcUrl, env("SOLANA_WS_URL"));
+  console.log(`\nclosing ${unknown.length} with ${issuer.address}; their rent goes back to it`);
+  for (let i = 0; i < unknown.length; i += CLOSE_PER_TX) {
+    const batch = unknown.slice(i, i + CLOSE_PER_TX);
+    const sig = await send(batch.map((a) => getCloseAttestationInstruction({ payer: issuer, authority: issuer, credential, attestation: address(a.address) })), issuer);
+    console.log(`  closed ${i + batch.length}/${unknown.length}  ${sig}`);
+  }
+}
+process.exit(unknown.length || missing.length ? 1 : 0);

@@ -9,6 +9,8 @@
     "test": "vitest run",
     "setup-issuer": "tsx scripts/setup-issuer.ts",
     "verify": "tsx scripts/verify.ts",
+    "rotate-issuer": "tsx scripts/rotate-issuer.ts",
+    "audit-chain": "tsx scripts/audit-chain.ts",
     "reissue": "tsx scripts/reissue.ts"
   },
   "dependencies": {

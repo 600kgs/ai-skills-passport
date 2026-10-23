@@ -92,9 +92,11 @@ export default function VerifyView() {
                 </Row>
               )}
               <Row label="Issuer">
-                Business and Technology University. Its signing key is published at{" "}
-                <a className="underline" href="/.well-known/btu-passport-issuer.json">this site&apos;s issuer file</a>
+                {issuer?.issuer ?? "Business and Technology University"}. Its key is published by{" "}
+                <b className="font-bold">{issuer?.domain ?? "this site"}</b> in{" "}
+                <a className="underline" href="/.well-known/btu-passport-issuer.json">its issuer file</a>
                 {issuer && <> (credential <span className="font-mono text-sm">{short(issuer.credential)}</span>)</>}, and this record belongs to it.
+                The domain is what vouches for the issuer: check that it&apos;s one the university controls.
               </Row>
               <Row label="Proof">
                 <a className="font-bold underline" href={`https://explorer.solana.com/address/${rec.address}?cluster=${issuer?.network ?? "devnet"}`} target="_blank" rel="noreferrer">

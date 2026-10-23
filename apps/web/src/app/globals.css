@@ -1,31 +1,58 @@
 @import "tailwindcss";
 
-/* colours taken from btu's passport mockup */
+/* btu's website palette (btu.edu.ge theme: primary #fe017e, secondary #0000b5, toolbar #474747).
+   orange is the passport's own colour, kept for the product mark so the site matches the pdf */
 :root {
   --background: #ffffff;
-  --foreground: #111111;
+  --foreground: #333333;
+  --ink: #111111;
+  --magenta: #fe017e;
+  --magenta-deep: #d1006a;
+  --blue: #0000b5;
+  --yellow: #f6c344;
+  --graphite: #474747;
+  --footer: #222222;
+  --panel: #f2f2f2;
+  --muted: #5f5f5f;
+  --line: #e1e1e1;
+  --danger: #c8102e;
   --btu-orange: #ff6a00;
-  --btu-navy: #1b2a6b;
-  --btu-purple: #6a1be6;
-  --btu-red: #f2464b;
-  --muted: #5b5b5b;
-  --line: #d9d9d9;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-btu-orange: var(--btu-orange);
-  --color-btu-navy: var(--btu-navy);
-  --color-btu-red: var(--btu-red);
-  --color-btu-purple: var(--btu-purple);
+  --color-ink: var(--ink);
+  --color-magenta: var(--magenta);
+  --color-magenta-deep: var(--magenta-deep);
+  --color-blue: var(--blue);
+  --color-yellow: var(--yellow);
+  --color-graphite: var(--graphite);
+  --color-footer: var(--footer);
+  --color-panel: var(--panel);
   --color-muted: var(--muted);
   --color-line: var(--line);
-  --font-sans: var(--font-archivo), var(--font-georgian), sans-serif;
+  --color-danger: var(--danger);
+  --color-btu-orange: var(--btu-orange);
+  /* older names, still used by pages until they're redone */
+  --color-btu-navy: var(--blue);
+  --color-btu-red: var(--danger);
+  --color-btu-purple: var(--blue);
+  --font-sans: var(--font-noto), var(--font-georgian), sans-serif;
+  --font-display: var(--font-bebas), var(--font-noto), var(--font-georgian), sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-archivo), var(--font-georgian), sans-serif;
+  font-family: var(--font-noto), var(--font-georgian), sans-serif;
 }
+
+/* bebas has no lowercase: headings and labels in it are capitals by design, like on btu.edu.ge */
+.font-display { letter-spacing: 0.02em; line-height: 0.95; }
+
+/* long georgian words (კონფიდენციალურობა) can't hyphenate; on a narrow phone they break instead of
+   pushing the page sideways */
+h1, h2, h3 { overflow-wrap: anywhere; }
+
+:focus-visible { outline: 3px solid var(--magenta); outline-offset: 2px; }

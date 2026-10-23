@@ -1,81 +1,59 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Suspense } from "react";
 import { SignOutButton } from "@/components/auth-buttons";
+import { formatDate } from "@/i18n/format";
+import { getDict } from "@/i18n/server";
 import { currentUser } from "@/lib/auth";
 import { passportForEmail } from "@/lib/passports";
 
-const day = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Tbilisi" });
+const link = "font-semibold text-ink underline decoration-magenta decoration-2 underline-offset-2 hover:text-magenta";
 
-export default function MePage() {
-  return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:py-16">
-      <Link href="/" className="inline-block text-2xl leading-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground">
-        <span className="block font-black">AI SKILLS</span>
-        <span className="block">DIGITAL PASSPORT</span>
-      </Link>
-      <Suspense fallback={<p className="mt-10 text-muted">Loading your passport...</p>}>
-        <MyPassport />
-      </Suspense>
-    </main>
-  );
-}
-
-async function MyPassport() {
+export default async function MePage() {
   const user = await currentUser();
   if (!user) redirect("/login");
-  const passport = await passportForEmail(user.email);
+  const [t, passport] = await Promise.all([getDict(), passportForEmail(user.email)]);
+  const m = t.me;
 
   return (
-    <>
-      <p className="mt-6 text-sm text-muted">
-        Signed in as {user.email}. <SignOutButton />
-        {user.isAdmin && <> <Link href="/admin" className="ml-3 font-bold underline">Open admin</Link></>}
+    <main className="mx-auto w-full max-w-6xl px-4 pt-20 pb-16 sm:pt-28 sm:pb-24">
+      <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-muted">
+        <span>{m.signedInAs} <b className="text-ink">{user.email}</b></span>
+        <SignOutButton />
+        {user.isAdmin && <Link href="/admin" className={link}>{m.openAdmin}</Link>}
       </p>
 
       {!passport ? (
-        <section className="mt-10 max-w-prose">
-          <h1 className="text-3xl font-black">No passport yet</h1>
-          <p className="mt-4">
-            There&apos;s no AI Skills Passport for {user.email}. BTU issues it once your first AI skill is confirmed.
-            If you already have confirmed skills, ask the office that records them to check that this email is on your record.
-          </p>
+        <section className="mt-10 max-w-2xl border-t-8 border-magenta bg-panel p-8">
+          <h1 className="font-display text-5xl text-ink">{m.noPassportTitle}</h1>
+          <p className="mt-4 text-lg leading-relaxed">{m.noPassportText}</p>
         </section>
       ) : (
         <>
-          <section className="mt-10">
-            <h1 className="text-3xl font-black sm:text-4xl">{passport.holder}</h1>
-            <p className="mt-2 text-lg">Passport {passport.passportId}</p>
-            <p className="mt-6 max-w-prose text-muted">
-              Send the PDF to anyone who needs to check your skills. They open the code printed next to the QR on this site and drop the file in.
-              Each new skill gives a new version; older ones still verify, marked as outdated.
-            </p>
+          <section className="mt-8">
+            <p className="font-display text-2xl text-blue">{m.passport} {passport.passportId}</p>
+            <h1 className="font-display text-6xl text-ink sm:text-7xl">{passport.holder}</h1>
+            <p className="mt-6 max-w-2xl text-lg leading-relaxed">{m.share}</p>
           </section>
 
-          <section aria-labelledby="versions-h" className="mt-12">
-            <h2 id="versions-h" className="border-b-2 border-foreground pb-2 text-xl font-black">Versions</h2>
+          <section aria-labelledby="versions-h" className="mt-14">
+            <h2 id="versions-h" className="border-b-4 border-blue pb-2 font-display text-4xl text-ink">{m.versions}</h2>
             <ul>
               {passport.versions.map((v) => (
-                <li key={v.code} className="flex flex-col gap-4 border-b border-line py-6 sm:flex-row sm:items-center sm:justify-between">
+                <li key={v.code} className={`mt-4 grid gap-5 p-6 sm:grid-cols-[auto_1fr_auto] sm:items-center ${v.isLatest ? "bg-blue text-white" : "bg-panel"}`}>
+                  <p className="font-display text-6xl leading-none">V{v.versionNo}</p>
                   <div>
-                    <p className="text-2xl font-black">
-                      V{v.versionNo}{" "}
-                      {v.isLatest
-                        ? <span className="text-base font-bold text-btu-navy">latest</span>
-                        : <span className="text-base font-bold text-muted">replaced by a newer version</span>}
-                    </p>
-                    <p className="mt-1 text-muted">
-                      Issued {day(v.issuedAt)}, {v.skillCount} {v.skillCount === 1 ? "skill" : "skills"}, code <span className="font-bold tracking-wider text-foreground">{v.code}</span>
+                    <p className="font-display text-2xl">{v.isLatest ? m.latest : m.replaced}</p>
+                    <p className={v.isLatest ? "text-white/85" : "text-muted"}>
+                      {m.issued} {formatDate(t.locale, v.issuedAt)}, {v.skillCount} {v.skillCount === 1 ? m.skillOne : m.skillMany}, {m.code}{" "}
+                      <span className={`font-bold tracking-wider ${v.isLatest ? "text-white" : "text-ink"}`}>{v.code}</span>
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-                    <a
-                      href={`/api/pdf/${v.code}`}
-                      className={`px-5 py-2 font-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground ${v.isLatest ? "bg-btu-orange" : "border-2 border-foreground"}`}
-                    >
-                      Download PDF
+                    <a href={`/api/pdf/${v.code}`}
+                      className={`px-5 pt-2.5 pb-2 font-display text-xl ${v.isLatest ? "bg-magenta text-white hover:bg-magenta-deep focus-visible:outline-white" : "border-2 border-ink text-ink hover:bg-ink hover:text-white"}`}>
+                      {m.download}
                     </a>
-                    <Link href={`/v/${v.code}`} className="underline">Open its verify page</Link>
+                    <Link href={`/v/${v.code}`} className={v.isLatest ? "font-semibold text-white underline underline-offset-2" : link}>{m.openVerify}</Link>
                   </div>
                 </li>
               ))}
@@ -83,6 +61,6 @@ async function MyPassport() {
           </section>
         </>
       )}
-    </>
+    </main>
   );
 }

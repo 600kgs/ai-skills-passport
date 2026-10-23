@@ -1,13 +1,15 @@
 import Link from "next/link";
+import { getDict } from "@/i18n/server";
 
-export default function Forbidden() {
+export default async function Forbidden() {
+  const f = (await getDict()).forbidden;
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-16 sm:py-24">
-      <h1 className="text-3xl font-black">This page is for passport admins</h1>
-      <p className="mt-4 max-w-prose">
-        Your BTU account isn&apos;t on the admin list. If you should have access, ask the passport team to add your email.
-      </p>
-      <p className="mt-8"><Link href="/me" className="font-bold underline">Go to your passport</Link></p>
+    <main className="mx-auto w-full max-w-3xl px-4 pt-20 pb-16 sm:pt-28 sm:pb-24">
+      <div className="border-t-8 border-magenta bg-panel p-8">
+        <h1 className="font-display text-5xl text-ink sm:text-6xl">{f.title}</h1>
+        <p className="mt-4 max-w-prose text-lg leading-relaxed">{f.text}</p>
+        <Link href="/me" className="mt-8 inline-block bg-magenta px-6 pt-3 pb-2.5 font-display text-2xl text-white hover:bg-magenta-deep">{f.link}</Link>
+      </div>
     </main>
   );
 }

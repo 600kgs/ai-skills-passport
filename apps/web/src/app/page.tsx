@@ -1,55 +1,65 @@
-"use client";
-
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { normalizeCode } from "@passport/core";
+import { StickerCluster } from "@/components/sticker-cluster";
+import { getDict } from "@/i18n/server";
+import { currentUser } from "@/lib/auth";
+import { publicStats } from "@/lib/stats";
+import { VerifyForm } from "./verify-form";
 
-export default function HomePage() {
-  const router = useRouter();
-  const [input, setInput] = useState("");
-  const [error, setError] = useState<string | null>(null);
-
-  function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const code = normalizeCode(input);
-    if (!code) return setError("A verification code has 10 characters, like 7KQ4-M2XD-9P. You'll find it next to the QR code on every page of the passport.");
-    router.push(`/v/${code}`);
-  }
+export default async function HomePage() {
+  const [t, user, stats] = await Promise.all([getDict(), currentUser(), publicStats()]);
+  const h = t.home;
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-16 sm:py-24">
-      <h1 className="text-4xl leading-none sm:text-5xl">
-        <span className="block font-black">AI SKILLS</span>
-        <span className="block">DIGITAL PASSPORT</span>
-      </h1>
-      <p className="mt-6 max-w-prose text-muted">
-        Check that a passport was issued by Business and Technology University and hasn&apos;t been changed. No account needed.
-      </p>
+    <main>
+      <section className="bg-blue text-white">
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 pt-20 pb-16 sm:pt-28 sm:pb-24 lg:grid-cols-[minmax(0,1fr)_26rem]">
+          <div>
+            <h1 className="max-w-4xl font-display text-6xl sm:text-7xl lg:text-8xl">{h.title}</h1>
+            <p className="mt-6 max-w-xl text-lg text-white/85">{h.lead}</p>
+            <VerifyForm />
+          </div>
+          <StickerCluster className="hidden lg:block" />
+        </div>
+      </section>
 
-      <form onSubmit={onSubmit} className="mt-10 flex flex-col gap-3 sm:flex-row">
-        <label htmlFor="code" className="sr-only">Verification code</label>
-        <input
-          id="code"
-          value={input}
-          onChange={(e) => { setInput(e.target.value); setError(null); }}
-          placeholder="Verification code, e.g. 7KQ4-M2XD-9P"
-          autoComplete="off"
-          spellCheck={false}
-          aria-invalid={!!error}
-          aria-describedby={error ? "code-error" : undefined}
-          className="min-w-0 flex-1 border-2 border-foreground px-4 py-3 text-lg uppercase tracking-wider outline-none placeholder:normal-case placeholder:tracking-normal focus-visible:border-btu-orange"
-        />
-        <button type="submit" className="bg-btu-orange px-6 py-3 text-lg font-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground">
-          Verify passport
-        </button>
-      </form>
-      {error && <p id="code-error" className="mt-4 border-l-4 border-btu-red pl-4">{error}</p>}
+      <section id="how" aria-labelledby="how-h" className="mx-auto max-w-6xl scroll-mt-8 px-4 py-16 sm:py-24">
+        <h2 id="how-h" className="font-display text-5xl text-magenta sm:text-6xl">{h.howTitle}</h2>
+        <ol className="mt-10 grid gap-10 md:grid-cols-3">
+          {h.steps.map((s, i) => (
+            <li key={s.title} className="border-t-4 border-blue pt-5">
+              <span aria-hidden className="font-display text-7xl text-blue">{i + 1}</span>
+              <h3 className="mt-2 font-display text-3xl text-ink">{s.title}</h3>
+              <p className="mt-3 max-w-sm leading-relaxed">{s.text}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
 
-      <p className="mt-16 border-t border-line pt-6">
-        BTU student? <Link href="/login" className="font-bold underline">Sign in to download your passport</Link>.
-      </p>
-      <p className="mt-2 text-sm text-muted"><Link href="/privacy" className="underline">Privacy</Link></p>
+      {stats && (
+        <section aria-labelledby="stats-h" className="bg-panel">
+          <div className="mx-auto max-w-6xl px-4 py-14">
+            <h2 id="stats-h" className="sr-only">{h.statsTitle}</h2>
+            <dl className="grid gap-8 sm:grid-cols-3">
+              {([["passports", stats.passports], ["versions", stats.versions], ["skills", stats.skills]] as const).map(([k, n]) => (
+                <div key={k} className="flex flex-col-reverse">
+                  <dt className="mt-1 font-display text-2xl text-blue">{h.stats[k]}</dt>
+                  <dd className="font-display text-7xl text-magenta">{n}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </section>
+      )}
+
+      <section aria-labelledby="students-h" className="mx-auto grid max-w-6xl px-4 py-16 sm:py-24 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+        <div className="flex flex-col items-start justify-between gap-8 bg-magenta p-8 text-white">
+          <h2 id="students-h" className="font-display text-4xl">{h.studentsTitle}</h2>
+          <Link href={user ? "/me" : "/login"} className="rounded-full border-2 border-white px-6 pt-2.5 pb-2 font-display text-xl hover:bg-white hover:text-magenta focus-visible:outline-white">
+            {user ? h.openMine : h.signIn}
+          </Link>
+        </div>
+        <p className="bg-panel p-8 text-lg leading-relaxed">{h.studentsText}</p>
+      </section>
     </main>
   );
 }

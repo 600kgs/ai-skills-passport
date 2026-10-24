@@ -36,20 +36,14 @@ const ICONS = {
 export const icon = (name: keyof typeof ICONS, widthMm = 7) =>
   `<svg class="art icon" viewBox="0 0 24 24" style="width:${widthMm}mm;color:${ORANGE}" fill="${ORANGE}" xmlns="http://www.w3.org/2000/svg">${ICONS[name]}</svg>`;
 
-// mkhedruli to mtavruli (georgian capitals), as on btu's logo
-const mtavruli = (s: string) => s.replace(/[ა-ჺ]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x0bc0));
-
-// btu's logo: the official wordmark and emblem (art/btu-logo.svg, from btu.edu.ge), then a divider
-// and the georgian name, set in our font since btu's typeface isn't available.
-// the svg's letters are 3027 units wide; scaled to 38 here, with their top at y=2
+// btu's full logo (art/btu-logo.svg): wordmark, emblem, divider and georgian name, as on btu.edu.ge.
+// the svg's letters are 3027 units wide; scaled to 38 here, with their top at y=2 (the divider starts 44 units above them)
 const LOGO_SCALE = 38 / 3027;
 // 21.9 makes the logo (B top to emblem tip, 53 units) as tall as the orange footer block, as in the mockup
 export function btuLogo(widthMm = 21.9): string {
   // the emblem starts a little left of the B and reaches well below the text, hence the wider box
   return svg("-3.5 0 107.5 56", (widthMm * 107.5) / 104, `
-    <image href="btu-logo.svg" x="${(-238 * LOGO_SCALE).toFixed(3)}" y="2" width="${(3491 * LOGO_SCALE).toFixed(3)}" height="${(4227 * LOGO_SCALE).toFixed(3)}"/>
-    <rect x="41.5" y="2" width="1" height="15.6" fill="#111"/>
-    ${["ბიზნესისა და", "ტექნოლოგიების", "უნივერსიტეტი"].map((l, i) => `<text x="45" y="${(5.4 + i * 6.1).toFixed(1)}" font-size="4.6" font-weight="700" fill="#111">${mtavruli(l)}</text>`).join("")}`, "art logo");
+    <image href="btu-logo.svg" x="${(-238 * LOGO_SCALE).toFixed(3)}" y="${(2 - 44 * LOGO_SCALE).toFixed(3)}" width="${(7004 * LOGO_SCALE).toFixed(3)}" height="${(4271 * LOGO_SCALE).toFixed(3)}"/>`, "art logo");
 }
 
 // the cover's sticker cluster, placed in mm as in the mockup. later images sit on top

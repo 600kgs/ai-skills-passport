@@ -12,10 +12,10 @@ export async function SiteFooter() {
   return (
     <footer className="mt-auto bg-footer text-white/75">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-[auto_1fr] lg:grid-cols-[auto_1fr_1.4fr]">
-        <a href={t.site.universityUrl} className="flex items-center gap-4">
+        <a href={t.site.universityUrl} className="self-start">
+          {/* btu's footer logo, as on btu.edu.ge */}
           {/* eslint-disable-next-line @next/next/no-img-element -- a static svg */}
-          <img src="/btu-logo.svg" alt="" className="h-16 w-auto" />
-          <span className="max-w-48 font-display text-xl text-white">{t.site.university}</span>
+          <img src="/btu-logo-full-white.svg" alt={t.site.university} className="h-36 w-auto" />
         </a>
         <ul className="space-y-2">
           {links.map((l) => <li key={l.href}><Link href={l.href} className="hover:text-white hover:underline">{l.label}</Link></li>)}

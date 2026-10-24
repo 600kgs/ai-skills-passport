@@ -107,10 +107,10 @@
   <text x="886" y="196" class="labm">reads it directly</text>
 
   <!-- people to the web app -->
-  <path d="M776 243 H724" class="l"/>
-  <path d="M776 363 H750 V250 H724" class="l"/>
+  <path d="M776 230 H724" class="l"/>
+  <path d="M776 363 H740 V262 H724" class="l"/>
 
   <!-- email -->
-  <path d="M480 270 H508 V520 H880 V510" class="l"/>
-  <text x="560" y="514" class="lab">email on each new version</text>
+  <path d="M280 280 H265 V540 H740 V473 H776" class="l"/>
+  <text x="560" y="534" class="lab">email on each new version</text>
 </svg>

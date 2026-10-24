@@ -17,7 +17,7 @@ const href = (f: PassportFilters, change: Partial<PassportFilters>) => {
 export default async function AdminPassportsPage({ searchParams }: PageProps<"/admin/passports">) {
   await requireAdmin();
   const f = passportFilters(await searchParams);
-  const [d, { rows, total, pages }, options] = await Promise.all([getDict(), listPassports(f), passportFilterOptions()]);
+  const [d, { rows, total, pages, page }, options] = await Promise.all([getDict(), listPassports(f), passportFilterOptions()]);
   const t = d.admin.passports;
   const filtered = !!(f.q || f.program || f.level || f.updated);
 
@@ -64,7 +64,7 @@ export default async function AdminPassportsPage({ searchParams }: PageProps<"/a
       </form>
 
       <div className="mt-8 flex flex-wrap items-baseline justify-between gap-4">
-        <h2 id="passports-h" className="font-display text-4xl text-ink">{fill(t.count, { n: total })}</h2>
+        <h2 id="passports-h" className="font-display text-4xl text-ink">{fill(total === 1 ? t.countOne : t.count, { n: total })}</h2>
         {filtered && <Link href="/admin/passports" className={`text-ink ${link}`}>{t.clear}</Link>}
       </div>
       <p className="mt-2 max-w-prose text-muted">{t.note}</p>
@@ -110,9 +110,9 @@ export default async function AdminPassportsPage({ searchParams }: PageProps<"/a
 
       {pages > 1 && (
         <nav aria-label={t.pager} className="mt-6 flex items-center justify-between gap-4">
-          {f.page > 1 ? <Link href={href(f, { page: f.page - 1 })} className={`font-display text-2xl text-ink ${link}`}>← {t.prev}</Link> : <span />}
-          <p className="text-muted">{fill(t.pageOf, { page: Math.min(f.page, pages), pages })}</p>
-          {f.page < pages ? <Link href={href(f, { page: f.page + 1 })} className={`font-display text-2xl text-ink ${link}`}>{t.next} →</Link> : <span />}
+          {page > 1 ? <Link href={href(f, { page: page - 1 })} className={`font-display text-2xl text-ink ${link}`}>← {t.prev}</Link> : <span />}
+          <p className="text-muted">{fill(t.pageOf, { page, pages })}</p>
+          {page < pages ? <Link href={href(f, { page: page + 1 })} className={`font-display text-2xl text-ink ${link}`}>{t.next} →</Link> : <span />}
         </nav>
       )}
     </section>

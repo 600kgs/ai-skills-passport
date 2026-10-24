@@ -2,7 +2,7 @@ import Link from "next/link";
 import { type ActivityFilters, activityFilters, queryString } from "@passport/core";
 import { fill, formatDateTime } from "@/i18n/format";
 import { getDict } from "@/i18n/server";
-import { activityPage } from "@/lib/admin";
+import { activityPage, loggedVersion } from "@/lib/admin";
 import { requireAdmin } from "../guard";
 
 const link = "underline decoration-magenta decoration-2 underline-offset-2 hover:text-magenta";
@@ -56,7 +56,7 @@ export default async function AdminActivityPage({ searchParams }: PageProps<"/ad
           <ol className="mt-2 divide-y divide-line">
             {audit.map((a) => (
               <li key={a.id} className="py-3">
-                <p><b className="text-ink">{actions[a.action] ?? a.action}</b>{a.subject && <> {subject(a.subject)}</>}</p>
+                <p><b className="text-ink">{actions[a.action] ?? a.action}</b>{a.subject && <> {subject(a.subject)}</>}{loggedVersion(a.details)}</p>
                 <p className="text-sm text-muted">{formatDateTime(d.locale, a.at)}, {a.actor}</p>
               </li>
             ))}

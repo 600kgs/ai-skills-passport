@@ -140,6 +140,11 @@ export const en = {
     text: "Your BTU account isn't on the admin list. If you should have access, ask the passport team to add your email.",
     link: "Go to your passport",
   },
+  notFound: {
+    title: "Page not found",
+    text: "This address doesn't exist. Check the link, or start again from the home page.",
+    link: "Go to the home page",
+  },
   admin: {
     title: "Admin",
     tabs: { overview: "Overview", passports: "Passports", upload: "Upload", activity: "Activity" },
@@ -189,11 +194,12 @@ export const en = {
     },
     passports: {
       count: "{n} passports",
+      countOne: "{n} passport",
       note: "The latest version of each. Older versions still verify, marked as outdated.",
       cols: { passport: "Passport", holder: "Holder", version: "Version", code: "Verification code", issued: "Issued", skills: "Skills" },
       notIssued: "Not issued yet. First issued date in the sheet: {date}",
       search: "Search",
-      searchPlaceholder: "Name, email, student ID, Passport ID or code",
+      searchPlaceholder: "Name, email, ID or code",
       program: "Program",
       level: "Level",
       allPrograms: "All programs",
@@ -454,6 +460,11 @@ export const ka: Dict = {
     text: "თქვენი BTU ანგარიში ადმინისტრატორების სიაში არ არის. თუ წვდომა გჭირდებათ, სთხოვეთ პასპორტის გუნდს თქვენი ელფოსტის დამატება.",
     link: "ჩემს პასპორტზე გადასვლა",
   },
+  notFound: {
+    title: "გვერდი ვერ მოიძებნა",
+    text: "ასეთი მისამართი არ არსებობს. შეამოწმეთ ბმული ან დაიწყეთ მთავარი გვერდიდან.",
+    link: "მთავარ გვერდზე გადასვლა",
+  },
   admin: {
     title: "ადმინისტრირება",
     tabs: { overview: "მიმოხილვა", passports: "პასპორტები", upload: "ატვირთვა", activity: "აქტივობა" },
@@ -503,11 +514,12 @@ export const ka: Dict = {
     },
     passports: {
       count: "{n} პასპორტი",
+      countOne: "{n} პასპორტი",
       note: "თითოეულის უახლესი ვერსია. ძველი ვერსიებიც მოწმდება, მაგრამ მოძველებულად აღინიშნება.",
       cols: { passport: "პასპორტი", holder: "მფლობელი", version: "ვერსია", code: "ვერიფიკაციის კოდი", issued: "გაცემულია", skills: "უნარები" },
       notIssued: "ჯერ არ გაცემულა. პირველი გაცემის თარიღი ცხრილში: {date}",
       search: "ძებნა",
-      searchPlaceholder: "სახელი, მეილი, სტუდენტის ID, პასპორტის ID ან კოდი",
+      searchPlaceholder: "სახელი, მეილი, ID ან კოდი",
       program: "პროგრამა",
       level: "საფეხური",
       allPrograms: "ყველა პროგრამა",

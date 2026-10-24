@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { fill, formatDate, formatDateTime } from "@/i18n/format";
 import { getDict } from "@/i18n/server";
-import { passportDetail } from "@/lib/admin";
+import { loggedVersion, passportDetail } from "@/lib/admin";
 import { requireAdmin } from "../../guard";
 
 const link = "underline decoration-magenta decoration-2 underline-offset-2 hover:text-magenta";
@@ -121,7 +121,7 @@ export default async function AdminPassportPage({ params }: PageProps<"/admin/pa
           <ol className="divide-y divide-line">
             {p.history.map((a) => (
               <li key={a.id} className="py-3">
-                <p><b className="text-ink">{actions[a.action] ?? a.action}</b>{a.subject && <> {a.subject}</>}</p>
+                <p><b className="text-ink">{actions[a.action] ?? a.action}</b>{a.subject && <> {a.subject}</>}{loggedVersion(a.details)}</p>
                 <p className="text-sm text-muted">{formatDateTime(d.locale, a.at)}, {a.actor}</p>
               </li>
             ))}

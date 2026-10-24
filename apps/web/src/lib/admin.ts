@@ -79,27 +79,35 @@ export async function listPassports(f: PassportFilters) {
     versions: [sql`${passportVersions.versionNo} desc nulls last`, passports.passportId],
   }[f.sort];
 
-  const base = () => db.select({ n: sql<number>`count(*)::int` }).from(passports)
+  const [counted] = await db.select({ n: sql<number>`count(*)::int` }).from(passports)
     .innerJoin(students, eq(students.studentId, passports.studentId))
-    .leftJoin(passportVersions, eq(passportVersions.id, passports.latestVersionId));
-  const [[counted], rows] = await Promise.all([
-    base().where(where),
-    db.select({
-      passportId: passports.passportId, firstIssued: passports.firstIssued,
-      firstName: students.firstName, lastName: students.lastName, email: students.email,
-      versionNo: passportVersions.versionNo, code: passportVersions.verificationCode,
-      issuedAt: passportVersions.issuedAt, skillCount: passportVersions.skillCount,
-    })
-      .from(passports)
-      .innerJoin(students, eq(students.studentId, passports.studentId))
-      .leftJoin(passportVersions, eq(passportVersions.id, passports.latestVersionId))
-      .where(where)
-      .orderBy(...order)
-      .limit(PASSPORTS_PER_PAGE)
-      .offset((f.page - 1) * PASSPORTS_PER_PAGE),
-  ]);
+    .leftJoin(passportVersions, eq(passportVersions.id, passports.latestVersionId))
+    .where(where);
   const total = counted?.n ?? 0;
-  return { rows, total, pages: Math.max(1, Math.ceil(total / PASSPORTS_PER_PAGE)) };
+  const pages = Math.max(1, Math.ceil(total / PASSPORTS_PER_PAGE));
+  // a page past the end (an old link after rows went away) shows the last page, not an empty list
+  const page = Math.min(f.page, pages);
+  const rows = await db.select({
+    passportId: passports.passportId, firstIssued: passports.firstIssued,
+    firstName: students.firstName, lastName: students.lastName, email: students.email,
+    versionNo: passportVersions.versionNo, code: passportVersions.verificationCode,
+    issuedAt: passportVersions.issuedAt, skillCount: passportVersions.skillCount,
+  })
+    .from(passports)
+    .innerJoin(students, eq(students.studentId, passports.studentId))
+    .leftJoin(passportVersions, eq(passportVersions.id, passports.latestVersionId))
+    .where(where)
+    .orderBy(...order)
+    .limit(PASSPORTS_PER_PAGE)
+    .offset((page - 1) * PASSPORTS_PER_PAGE);
+  return { rows, total, pages, page };
+}
+
+// the version a log entry is about, when it has one: issue entries store versionNo, email entries version
+export function loggedVersion(details: unknown): string {
+  const d = details as { versionNo?: unknown; version?: unknown } | null;
+  const n = d?.versionNo ?? d?.version;
+  return typeof n === "number" ? ` V${n}` : "";
 }
 
 // the values the program and level filters offer: whatever the sheet actually holds

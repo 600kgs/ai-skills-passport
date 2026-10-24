@@ -1,6 +1,18 @@
 # https certificate is issued and renewed automatically for $DOMAIN
 {$DOMAIN} {
 	encode zstd gzip
-	header Strict-Transport-Security "max-age=31536000"
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		# no other site may frame our pages (a hidden admin page under a fake button)
+		X-Frame-Options "DENY"
+		# no script policy: next's inline scripts would need a per-request nonce, which ends prerendering
+		Content-Security-Policy "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+		X-Content-Type-Options "nosniff"
+		# verify urls carry the code; other sites only see our origin
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-X-Powered-By
+		-Server
+	}
 	reverse_proxy web:3000
 }

@@ -7,6 +7,7 @@ import { PgBoss } from "pg-boss";
 import { solanaChain } from "./chain.ts";
 import { issuePassport, type IssueDeps } from "./issue.ts";
 import { planImport } from "./import.ts";
+import { brevoSender, loadNotice, renderMail, shouldEmail } from "./notify.ts";
 import { gotenbergRenderer } from "./pdf/render.ts";
 import { setRecordStatus } from "./sheet-status.ts";
 import { googleSheet } from "./sheets.ts";
@@ -25,6 +26,7 @@ const env = (name: string) => {
 };
 const SYNC_EVERY_MS = 15_000;
 export const ISSUE_QUEUE = "issue-passport";
+const NOTIFY_QUEUE = "notify-student";
 
 const url = env("DATABASE_URL");
 const { db, pool } = createDb(url);
@@ -37,6 +39,8 @@ await boss.start();
 // one queued + one running job per passport; a skill arriving mid-issue gets the next run.
 // failures retry with backoff, and each retry resumes the same unfinished version
 await boss.createQueue(ISSUE_QUEUE, { policy: "stately", retryLimit: 5, retryDelay: 15, retryBackoff: true });
+// created before any issue job runs, so a finished issue can always queue its email
+await boss.createQueue(NOTIFY_QUEUE, { retryLimit: 4, retryDelay: 60, retryBackoff: true });
 
 const path = (name: string) => {
   const p = env(name);
@@ -53,8 +57,26 @@ const deps: IssueDeps = {
 };
 await boss.work<{ passportId: string }>(ISSUE_QUEUE, async ([job]) => {
   const r = await issuePassport(db, deps, job!.data.passportId);
-  if (r.status === "issued") console.log(`issued ${r.passportId} V${r.versionNo} (${r.code}) -> ${r.attestation}`);
+  if (r.status === "issued") {
+    console.log(`issued ${r.passportId} V${r.versionNo} (${r.code}) -> ${r.attestation}`);
+    // the student hears about it from a job of its own: a mail problem can't fail or repeat an issue
+    await boss.send(NOTIFY_QUEUE, { code: r.code }, { singletonKey: r.code }).catch((e) => console.error(`couldn't queue the email for ${r.code}:`, e));
+  }
   return r;
+});
+
+// optional: without a brevo key (local dev, tests) nothing is mailed
+const mailKey = process.env.BREVO_API_KEY;
+const sendMail = mailKey ? brevoSender(mailKey, { email: env("MAIL_FROM_EMAIL"), name: process.env.MAIL_FROM_NAME ?? "BTU AI Skills Passport" }) : null;
+await boss.work<{ code: string }>(NOTIFY_QUEUE, async ([job]) => {
+  const n = await loadNotice(db, job!.data.code);
+  if (!n) return { skipped: "no issued version" };
+  if (!shouldEmail(n.email)) return { skipped: "test address" };
+  if (!sendMail) return { skipped: "mail not configured" };
+  const messageId = await sendMail(renderMail(n, deps.publicBaseUrl));
+  await db.insert(auditLog).values({ actor: "system", action: "student_notified", subject: n.passportId, details: { version: n.versionNo, messageId } });
+  console.log(`notified ${n.passportId} V${n.versionNo}`);
+  return { messageId };
 });
 console.log("worker ready, queue running");
 

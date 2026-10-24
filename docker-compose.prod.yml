@@ -61,6 +61,10 @@ services:
       ISSUER_KEY_FILE: /run/secrets/issuer-key
       AUTHORITY_ADDRESS: ${AUTHORITY_ADDRESS:?}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?}
+      # optional: without a key the worker mails nobody
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      MAIL_FROM_EMAIL: ${MAIL_FROM_EMAIL:-}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-BTU AI Skills Passport}
     secrets:
       - service-account
       - issuer-key

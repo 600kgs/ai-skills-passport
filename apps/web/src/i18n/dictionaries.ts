@@ -129,6 +129,7 @@ export const en = {
       { title: "Who can see your passport", text: "Anyone who has a verification code sees the name, passport ID and skills of that version, the same as printed on the PDF. The code is only printed on your PDF, so you decide who gets it by deciding who gets the file." },
       { title: "Signing in", text: "Google tells us your BTU email and name so we can find your passport. We don't store anything from your Google account. Your session is an encrypted cookie that ends when you sign out or after 12 hours." },
       { title: "Checking a PDF", text: "When someone drops a PDF on a verify page, the file stays in their browser. Only its fingerprint is compared with the record." },
+      { title: "Emails", text: "When a new version of your passport is issued, we send one email to your BTU address with the new skill and a link to download it. Nothing else is sent, and your address is never shared. The email goes out through Brevo, our email provider." },
     ],
     contactTitle: "Questions or corrections",
     contactBefore: "Write to",
@@ -212,6 +213,7 @@ export const en = {
         sync_requested: "Started a sync",
         rows_imported: "Added rows from an Excel file",
         ledger_reset: "Reset the ledger for a full reissue",
+        student_notified: "Emailed the student about",
       } as Record<string, string>,
     },
     upload: {
@@ -386,6 +388,7 @@ export const ka: Dict = {
       { title: "ვის შეუძლია თქვენი პასპორტის ნახვა", text: "ვისაც ვერიფიკაციის კოდი აქვს, ხედავს ამ ვერსიის სახელს, პასპორტის ID-ს და უნარებს, ზუსტად ისე, როგორც PDF-ზეა დაბეჭდილი. კოდი მხოლოდ თქვენს PDF-ზეა, ასე რომ, ვის მისცემთ ფაილს, თქვენ წყვეტთ." },
       { title: "შესვლა", text: "Google გვაწვდის თქვენს BTU ელფოსტასა და სახელს, რომ თქვენი პასპორტი ვიპოვოთ. თქვენი Google ანგარიშიდან არაფერს ვინახავთ. სესია დაშიფრული cookie-ა, რომელიც გასვლისას ან 12 საათის შემდეგ სრულდება." },
       { title: "PDF-ის შემოწმება", text: "როცა ვინმე შემოწმების გვერდზე PDF-ს ამატებს, ფაილი მის ბრაუზერში რჩება. ჩანაწერს მხოლოდ მისი ციფრული ანაბეჭდი ედარება." },
+      { title: "წერილები", text: "როცა თქვენი პასპორტის ახალი ვერსია გაიცემა, თქვენს BTU ელფოსტაზე ერთ წერილს ვაგზავნით ახალი უნარითა და ჩამოტვირთვის ბმულით. სხვა არაფერს ვაგზავნით და თქვენს მისამართს არავის ვუზიარებთ. წერილი იგზავნება Brevo-ს, ჩვენი ელფოსტის სერვისის მეშვეობით." },
     ],
     contactTitle: "კითხვები და შესწორებები",
     contactBefore: "მოგვწერეთ:",
@@ -469,6 +472,7 @@ export const ka: Dict = {
         sync_requested: "დაიწყო სინქრონიზაცია",
         rows_imported: "Excel ფაილიდან დაემატა რიგები",
         ledger_reset: "რეესტრი გასუფთავდა სრული ხელახალი გაცემისთვის",
+        student_notified: "სტუდენტს გაეგზავნა წერილი:",
       },
     },
     upload: {

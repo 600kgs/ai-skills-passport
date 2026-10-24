@@ -1,12 +1,12 @@
 // background worker: applies db migrations, runs the job queue, and polls the sheet.
 import { fileURLToPath } from "node:url";
 import { ADMIN_QUEUE, type AdminJob, type ImportPreview, type ImportResult, type SyncResult } from "@passport/core";
-import { auditLog, createDb, syncRuns } from "@passport/db";
+import { auditLog, createDb, eq, passports, skillAwards, students, syncRuns } from "@passport/db";
 import { runMigrations } from "@passport/db/migrate";
 import { PgBoss } from "pg-boss";
 import { solanaChain } from "./chain.ts";
 import { issuePassport, type IssueDeps } from "./issue.ts";
-import { planImport } from "./import.ts";
+import { type LedgerFacts, planImport } from "./import.ts";
 import { brevoSender, loadNotice, renderMail, shouldEmail } from "./notify.ts";
 import { gotenbergRenderer } from "./pdf/render.ts";
 import { setRecordStatus } from "./sheet-status.ts";
@@ -134,10 +134,10 @@ await boss.work<AdminJob>(ADMIN_QUEUE, { pollingIntervalSeconds: 1 }, async ([jo
       await db.insert(auditLog).values({ actor: j.by, action: "sync_requested" });
       return syncResult();
     case "import-preview":
-      return (await planImport(await sheet.read(), j.grid)).preview;
+      return (await planImport(await sheet.read(), j.grid, await ledgerFacts())).preview;
     case "import-apply": {
       // checked again against the sheet as it is now: it may have changed since the preview
-      const plan = await planImport(await sheet.read(), j.grid);
+      const plan = await planImport(await sheet.read(), j.grid, await ledgerFacts());
       if (plan.preview.error) throw new Error(plan.preview.error);
       if (!plan.valid.length) throw new Error("none of the rows in the file can be added");
       await sheet.insertRows(plan.insertAt, plan.valid.map((r) => r.values));
@@ -149,6 +149,16 @@ await boss.work<AdminJob>(ADMIN_QUEUE, { pollingIntervalSeconds: 1 }, async ([jo
     }
   }
 });
+
+// the ledger side of an upload check: record ids, and every student with their passport
+async function ledgerFacts(): Promise<LedgerFacts> {
+  const [records, people] = await Promise.all([
+    db.select({ recordId: skillAwards.recordId }).from(skillAwards),
+    db.select({ studentId: students.studentId, firstName: students.firstName, lastName: students.lastName, email: students.email, passportId: passports.passportId })
+      .from(students).leftJoin(passports, eq(passports.studentId, students.studentId)),
+  ]);
+  return { recordIds: new Set(records.map((r) => r.recordId)), students: new Map(people.map(({ studentId, ...p }) => [studentId, p])) };
+}
 
 async function shutdown() {
   clearInterval(timer);

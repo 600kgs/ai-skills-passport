@@ -60,6 +60,43 @@ describe("planImport", () => {
     expect(plan.valid).toEqual([]);
   });
 
+  describe("against the ledger, where deleted rows live on", () => {
+    // nika's rows were deleted from the sheet; the ledger still has his student, passport and REC-0070
+    const nika = ["BTU-T-3006", "Nika", "Loliashvili", "nika.loliashvili.1@btu.edu.ge", "Information Technologies", "Bachelor's", "", "", "Active"];
+    const ledger = {
+      recordIds: new Set(["REC-0001", "REC-0002", "REC-0070"]),
+      students: new Map([
+        ["BTU-T-0001", { firstName: "Giorgi", lastName: "Kapanadze", email: "btu-t-0001@example.org", passportId: "BTU-AI-000125" }],
+        ["BTU-T-3006", { firstName: "Nika", lastName: "Loliashvili", email: "nika.loliashvili.1@btu.edu.ge", passportId: "BTU-AI-000150" }],
+      ]),
+    };
+    const only = async (row: string[]) => (await planImport(sheet, [FILE_HEADER, row], ledger)).preview.rows[0]!;
+
+    it("refuses a record id that only the ledger still has, and says how to fix it", async () => {
+      const r = await only(fileRow("REC-0070", nika));
+      expect(r.ok).toBe(false);
+      expect(r.errors.join()).toContain("REC-0070 was used before and its row was deleted from the sheet");
+    });
+
+    it("refuses a ledger student whose name or email in the file differs", async () => {
+      expect((await only(fileRow("REC-0100", ["BTU-T-3006", "Nikoloz", ...nika.slice(2)]))).errors.join()).toContain("identity fields can't change");
+    });
+
+    it("refuses an email or passport id that already belongs to another student", async () => {
+      const stranger = ["BTU-T-0500", "Ana", "Gelashvili", "nika.loliashvili.1@btu.edu.ge", "Information Technologies", "Bachelor's", "", "", "Active"];
+      expect((await only(fileRow("REC-0100", stranger))).errors.join()).toContain("already belongs to BTU-T-3006");
+      const withPassport = [...FILE_HEADER, "Passport ID (Existing)"];
+      const ownEmail = stranger.with(3, "btu-t-0500@example.org");
+      const plan = await planImport(sheet, [withPassport, [...fileRow("REC-0100", ownEmail), "BTU-AI-000150"]], ledger);
+      expect(plan.preview.rows[0]!.errors.join()).toContain("Passport ID BTU-AI-000150 already belongs to BTU-T-3006");
+    });
+
+    it("still adds a ledger student's new skill when the details match", async () => {
+      expect(await only(fileRow("REC-0100", nika))).toMatchObject({ ok: true, errors: [] });
+      expect(await only(fileRow("REC-0003"))).toMatchObject({ ok: true, errors: [] });
+    });
+  });
+
   it("says what's wrong with a file it can't use at all", async () => {
     expect((await planImport(sheet, [["Name", "Skill"], ["Giorgi", "AI"]])).preview.error).toContain("header row with Student ID and Record ID");
     expect((await planImport(sheet, [FILE_HEADER, [], ["", "note under the table, in the Student ID column"]])).preview.error).toContain("no records");

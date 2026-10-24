@@ -1,7 +1,37 @@
 // an admin's excel upload, checked against the live sheet. the rows are validated as if they
 // were already appended under the sheet's last record, by the same parser sync uses, so
 // "valid here" means "sync will take it": duplicates and identity clashes included.
-import { normHeader, parseSheet, SHEET_HEADERS as H, type ImportPreview, UPLOAD_MAX_ROWS } from "@passport/core";
+import { normHeader, parseSheet, SHEET_HEADERS as H, type ImportPreview, type SkillRecord, UPLOAD_MAX_ROWS } from "@passport/core";
+
+// what the ledger already holds. the sheet alone isn't enough: a deleted row's record and student stay in the
+// ledger, and sync refuses a file row that clashes with them, so the preview has to refuse it too
+export type LedgerFacts = {
+  recordIds: Set<string>;
+  students: Map<string, { firstName: string; lastName: string; email: string; passportId: string | null }>;
+};
+const NO_LEDGER: LedgerFacts = { recordIds: new Set(), students: new Map() };
+
+// the same refusals as sync, worded the same way
+function ledgerErrors(r: SkillRecord, ledger: LedgerFacts, emailOwner: Map<string, string>, passportOwner: Map<string, string>): string[] {
+  if (ledger.recordIds.has(r.recordId)) {
+    return [`${r.recordId} was used before and its row was deleted from the sheet. Put that row back, or use a new Record ID`];
+  }
+  const known = ledger.students.get(r.studentId);
+  if (known) {
+    if (known.firstName !== r.firstName || known.lastName !== r.lastName || known.email.toLowerCase() !== r.email.toLowerCase()) {
+      return [`name or email differs from the issued passport (${known.firstName} ${known.lastName}, ${known.email}); identity fields can't change`];
+    }
+    if (r.passportId && known.passportId && r.passportId !== known.passportId) {
+      return [`Passport ID ${r.passportId} doesn't match this student's passport ${known.passportId}`];
+    }
+    return [];
+  }
+  const owner = emailOwner.get(r.email.toLowerCase());
+  if (owner) return [`email ${r.email} already belongs to ${owner}`];
+  const passportHolder = r.passportId ? passportOwner.get(r.passportId) : undefined;
+  if (passportHolder) return [`Passport ID ${r.passportId} already belongs to ${passportHolder}`];
+  return [];
+}
 
 // sync writes these; whatever a file says in them is dropped
 const SYSTEM = new Set<string>([H.syncStatus, H.syncedVersion, H.syncedAt, H.syncError]);
@@ -16,7 +46,7 @@ export type ImportPlan = {
 
 const failed = (error: string, insertAt = 0): ImportPlan => ({ preview: { rows: [], ignoredColumns: [], error }, insertAt, valid: [] });
 
-export async function planImport(sheetGrid: string[][], upload: string[][]): Promise<ImportPlan> {
+export async function planImport(sheetGrid: string[][], upload: string[][], ledger: LedgerFacts = NO_LEDGER): Promise<ImportPlan> {
   const sheet = await parseSheet(sheetGrid);
   const sheetHeader = sheetGrid[sheet.headerRow - 1]!.map(normHeader);
   const lastRecordRow = Math.max(sheet.headerRow, ...sheet.results.map((r) => r.rowNumber));
@@ -54,12 +84,14 @@ export async function planImport(sheetGrid: string[][], upload: string[][]): Pro
 
   const combined = await parseSheet([...sheetGrid.slice(0, lastRecordRow), ...lines.map((l) => l.values)]);
   const lineOf = (row: number) => lines[row - insertAt]?.line;
+  const emailOwner = new Map([...ledger.students].map(([id, s]) => [s.email.toLowerCase(), id]));
+  const passportOwner = new Map([...ledger.students].flatMap(([id, s]) => (s.passportId ? [[s.passportId, id] as const] : [])));
   const rows = combined.results.filter((r) => r.rowNumber >= insertAt).map((r) => {
     const line = lineOf(r.rowNumber)!;
     // the parser counts rows in the combined grid; point at the file's own lines instead
-    const errors = r.ok ? [] : r.errors.map((e) => e.replace(/\(first on row (\d+)\)/, (m, n: string) =>
+    const errors = r.ok ? ledgerErrors(r.record, ledger, emailOwner, passportOwner) : r.errors.map((e) => e.replace(/\(first on row (\d+)\)/, (m, n: string) =>
       Number(n) >= insertAt ? `(first on line ${lineOf(Number(n))} of this file)` : `(already on row ${n} of the sheet)`));
-    return { line, recordId: r.recordId, ok: r.ok, errors };
+    return { line, recordId: r.recordId, ok: errors.length === 0, errors };
   });
   const valid = rows.flatMap((r, i) => (r.ok ? [{ recordId: r.recordId, values: lines[i]!.values }] : []));
   return { preview: { rows, ignoredColumns }, insertAt, valid };

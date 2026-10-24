@@ -55,6 +55,12 @@ export const SHEET_HEADERS = H;
 export const REMOVED_FROM_SHEET = "no longer in the sheet";
 export const normHeader = (s: unknown) => String(s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+// the shape alone lets 2026-02-31 through, and postgres would then reject it and roll back the whole sync
+const realDate = (s: string) => {
+  const d = new Date(`${s}T00:00:00Z`);
+  return ISO_DATE.test(s) && !Number.isNaN(d.getTime()) && d.toISOString().startsWith(s);
+};
+const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export async function parseSheet(rows: string[][]): Promise<ParsedSheet> {
   const headerIdx = rows.findIndex((r) => r.map(normHeader).includes(H.recordId) && r.map(normHeader).includes(H.studentId));
@@ -84,12 +90,14 @@ export async function parseSheet(rows: string[][]): Promise<ParsedSheet> {
     if (studentId && !/^BTU-T-\d+$/.test(studentId)) errors.push(`bad Student ID "${studentId}"`);
     const passportId = get(H.passportId);
     if (passportId && !/^BTU-AI-\d{6}$/.test(passportId)) errors.push(`bad Passport ID "${passportId}"`);
+    if (get(H.email) && !EMAIL.test(get(H.email))) errors.push(`bad email "${get(H.email)}"`);
     for (const h of [H.dateEarned, H.firstIssued]) {
-      if (get(h) && !ISO_DATE.test(get(h))) errors.push(`${h} must be YYYY-MM-DD, got "${get(h)}"`);
+      if (get(h) && !realDate(get(h))) errors.push(`${h} must be a real date as YYYY-MM-DD, got "${get(h)}"`);
     }
 
     const category = get(H.category);
-    const isCategory = (c: string): c is Category => c in CATEGORIES;
+    // own keys only: "constructor" or "toString" is "in" every object
+    const isCategory = (c: string): c is Category => Object.hasOwn(CATEGORIES, c);
     if (category && !isCategory(category)) errors.push(`unknown category "${category}"`);
     const stamp = get(H.stampCode);
     if (stamp && isCategory(category) && stamp !== CATEGORIES[category]) errors.push(`stamp ${stamp} doesn't match ${category}`);

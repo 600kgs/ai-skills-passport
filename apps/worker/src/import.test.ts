@@ -60,6 +60,16 @@ describe("planImport", () => {
     expect(plan.valid).toEqual([]);
   });
 
+  it("refuses a pending or rejected row when the sheet has no status column, since it would land as confirmed", async () => {
+    const noStatus = sheet.map((r) => (r === SHEET_HEADER ? SHEET_HEADER.slice(0, -1) : r));
+    const plan = await planImport(noStatus, [[...FILE_HEADER, "Verification Status"],
+      [...fileRow("REC-0003"), "PENDING"], [...fileRow("REC-0004"), ""], [...fileRow("REC-0005"), "confirmed"]]);
+    const byId = Object.fromEntries(plan.preview.rows.map((r) => [r.recordId, r]));
+    expect(byId["REC-0003"]!.errors.join()).toContain("no Verification Status column");
+    expect(byId["REC-0004"]!.ok).toBe(false);
+    expect(plan.valid.map((r) => r.recordId)).toEqual(["REC-0005"]);
+  });
+
   describe("against the ledger, where deleted rows live on", () => {
     // nika's rows were deleted from the sheet; the ledger still has his student, passport and REC-0070
     const nika = ["BTU-T-3006", "Nika", "Loliashvili", "nika.loliashvili.1@btu.edu.ge", "Information Technologies", "Bachelor's", "", "", "Active"];

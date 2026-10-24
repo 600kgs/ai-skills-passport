@@ -31,6 +31,30 @@ describe("setRecordStatus", () => {
     expect(sheet.writes).toEqual([{ row: 5, col: 16, value: "REJECTED" }]);
   });
 
+  describe("when someone inserts a row above it at the same moment", () => {
+    // a row lands at the top of the records on the given read, like a person editing the sheet mid-click
+    class ShiftingSheet extends FakeSheet {
+      reads = 0;
+      constructor(grid: string[][], private shiftOnRead: number) { super(grid); }
+      override async read() {
+        if (++this.reads === this.shiftOnRead) this.grid.splice(4, 0, row("REC-0900", "CONFIRMED"));
+        return super.read();
+      }
+    }
+
+    it("finds the record again if it moved before the write", async () => {
+      const sheet = new ShiftingSheet(sheetOf(row("REC-0001", "PENDING")).grid, 2);
+      await expect(setRecordStatus(sheet, "REC-0001", "CONFIRMED")).resolves.toEqual({ row: 6 });
+      expect(sheet.writes).toEqual([{ row: 6, col: 16, value: "CONFIRMED" }]);
+    });
+
+    it("undoes the write if the row moved during it, and confirms nobody", async () => {
+      const sheet = new ShiftingSheet(sheetOf(row("REC-0001", "PENDING")).grid, 3);
+      await expect(setRecordStatus(sheet, "REC-0001", "CONFIRMED")).rejects.toThrow("nothing was decided");
+      expect(sheet.writes).toEqual([{ row: 5, col: 16, value: "CONFIRMED" }, { row: 5, col: 16, value: "" }]);
+    });
+  });
+
   it("won't change a record that is already confirmed or rejected", async () => {
     const sheet = sheetOf(row("REC-0001", "CONFIRMED"), row("REC-0002", "rejected"));
     await expect(setRecordStatus(sheet, "REC-0001", "REJECTED")).rejects.toThrow("is CONFIRMED, not PENDING");

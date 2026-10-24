@@ -5,7 +5,8 @@ import { equalBytes } from "./hash.ts";
 
 export type RecordStatus = "unknown" | "latest" | "outdated" | "unconfirmed";
 export type FileStatus = "not-checked" | "authentic" | "modified";
-export type Outcome = "unknown" | "record-only" | "authentic-latest" | "authentic-outdated" | "modified";
+// authentic-unconfirmed: the file is what btu issued, but our server couldn't say whether a newer version exists
+export type Outcome = "unknown" | "record-only" | "authentic-latest" | "authentic-outdated" | "authentic-unconfirmed" | "modified";
 
 export function verdict(input: {
   record: ChainRecord | null;
@@ -16,5 +17,6 @@ export function verdict(input: {
   const record: RecordStatus = !input.latest ? "unconfirmed" : input.latest.isLatest ? "latest" : "outdated";
   if (!input.fileHash) return { record, file: "not-checked", outcome: "record-only" };
   if (!equalBytes(input.fileHash, input.record.pdfSha256)) return { record, file: "modified", outcome: "modified" };
-  return { record, file: "authentic", outcome: record === "outdated" ? "authentic-outdated" : "authentic-latest" };
+  const outcome = record === "latest" ? "authentic-latest" : record === "outdated" ? "authentic-outdated" : "authentic-unconfirmed";
+  return { record, file: "authentic", outcome };
 }

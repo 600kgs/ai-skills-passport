@@ -13,6 +13,7 @@ const TONE: Record<Kind, string> = {
   "record-only": "border-4 border-blue bg-white text-blue",
   "authentic-latest": "bg-blue text-white",
   "authentic-outdated": "bg-yellow text-ink",
+  "authentic-unconfirmed": "bg-blue text-white",
   modified: "border-l-[12px] border-magenta bg-ink text-white",
 };
 
@@ -22,6 +23,7 @@ const ICON: Record<Kind, React.ReactNode> = {
   "record-only": <><path d="M14 6h14l8 8v28H14z" /><path d="M28 6v8h8M19 24h12M19 30h12" /></>,
   "authentic-latest": <><circle cx="24" cy="24" r="19" /><path d="m15 24.5 6.5 6.5L34 17.5" /></>,
   "authentic-outdated": <><circle cx="24" cy="24" r="19" /><path d="M24 13v12l7 4" /></>,
+  "authentic-unconfirmed": <><circle cx="24" cy="24" r="19" /><path d="m15 24.5 6.5 6.5L34 17.5" /></>,
   modified: <><path d="M24 5 44 41H4z" /><path d="M24 18v11M24 34v1" /></>,
 };
 

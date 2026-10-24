@@ -53,6 +53,29 @@ describe("parseSheet", () => {
     expect(!results[1]?.ok && results[1]?.errors.join()).toContain("disagrees");
   });
 
+  it("stops impossible dates as a row error, so they never reach the database", async () => {
+    const dated = (d: string) => { const r = row(giorgi, "REC-0001"); r[15] = d; return r; };
+    for (const bad of ["2026-02-31", "2026-13-01", "2026-00-10"]) {
+      const [r] = (await parseSheet(sheet(dated(bad)))).results;
+      expect(!r?.ok && r?.errors.join()).toContain("must be a real date");
+    }
+    expect((await parseSheet(sheet(dated("2028-02-29")))).results[0]?.ok).toBe(true);
+  });
+
+  it("accepts only the three real categories, not names every object has", async () => {
+    for (const cat of ["constructor", "toString"]) {
+      const [r] = (await parseSheet(sheet(row(giorgi, "REC-0001", "SKL-001", "AI Literacy", cat, "")))).results;
+      expect(!r?.ok && r?.errors.join()).toContain(`unknown category "${cat}"`);
+    }
+  });
+
+  it("rejects an email that isn't one", async () => {
+    for (const email of ["giorgi", "giorgi@", "giorgi@gmail"]) {
+      const [r] = (await parseSheet(sheet(row([...giorgi.slice(0, 3), email, ...giorgi.slice(4)], "REC-0001")))).results;
+      expect(!r?.ok && r?.errors.join()).toContain("bad email");
+    }
+  });
+
   it("flags a stamp that doesn't match the category", async () => {
     const [r] = (await parseSheet(sheet(row(giorgi, "REC-0001", "SKL-001", "AI Literacy", "AI Skill", "BDG-AI-003")))).results;
     expect(r?.ok).toBe(false);

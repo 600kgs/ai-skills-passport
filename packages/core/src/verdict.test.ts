@@ -28,8 +28,8 @@ describe("verdict", () => {
     expect(v).toEqual({ record: "outdated", file: "modified", outcome: "modified" });
   });
 
-  it("chain record still counts when our server is down", async () => {
+  it("still proves the file when our server is down, but doesn't claim it's the latest", async () => {
     const v = verdict({ record: await record(), latest: null, fileHash: await sha256(pdf) });
-    expect(v).toEqual({ record: "unconfirmed", file: "authentic", outcome: "authentic-latest" });
+    expect(v).toEqual({ record: "unconfirmed", file: "authentic", outcome: "authentic-unconfirmed" });
   });
 });

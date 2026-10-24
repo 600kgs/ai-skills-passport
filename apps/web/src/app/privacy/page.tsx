@@ -18,7 +18,7 @@ export default async function PrivacyPage() {
         ))}
         <Section title={p.contactTitle}>
           {p.contactBefore}{" "}
-          <a className="font-semibold text-ink underline decoration-magenta decoration-2 underline-offset-2 hover:text-magenta" href={`mailto:${CONTACT}`}>{CONTACT}</a>.{" "}
+          <a className="font-semibold break-all text-ink underline decoration-magenta decoration-2 underline-offset-2 hover:text-magenta" href={`mailto:${CONTACT}`}>{CONTACT}</a>.{" "}
           {p.contactAfter}
         </Section>
       </div>

@@ -59,11 +59,13 @@ export async function planImport(sheetGrid: string[][], upload: string[][], ledg
   fileHeader.forEach((h, i) => { if (normHeader(h) && !fileCol.has(normHeader(h))) fileCol.set(normHeader(h), i); });
   const ignoredColumns = fileHeader.filter((h) => normHeader(h) && !sheetHeader.includes(normHeader(h)) && !SYSTEM.has(normHeader(h)));
   const hasStatus = fileCol.has(H.verification);
+  // a sheet without the column counts every row as confirmed, so a pending or rejected row can't go into it as such
+  const sheetHasStatus = sheetHeader.includes(H.verification);
   // a known student's passport id and first-issued date come from the sheet when the file leaves them blank
   const known = new Map(sheet.results.flatMap((r) => (r.ok && r.record.passportId
     ? [[r.record.studentId, { [H.passportId]: r.record.passportId, [H.firstIssued]: r.record.firstIssued ?? "" }] as const] : [])));
 
-  const lines: { line: number; values: string[] }[] = [];
+  const lines: { line: number; values: string[]; status: string }[] = [];
   for (const [i, r] of upload.slice(headerIdx + 1).entries()) {
     const get = (h: string) => (fileCol.has(h) ? String(r[fileCol.get(h)!] ?? "").trim() : "");
     // same rule as the sheet: a row without an id or skill data is a note, not a record
@@ -71,6 +73,7 @@ export async function planImport(sheetGrid: string[][], upload: string[][], ledg
     const student = known.get(get(H.studentId)) as Record<string, string> | undefined;
     lines.push({
       line: headerIdx + 2 + i,
+      status: get(H.verification).toUpperCase(),
       values: sheetHeader.map((h) => {
         if (SYSTEM.has(h)) return "";
         // no status column in the file means confirmed, exactly like a sheet without one
@@ -88,9 +91,13 @@ export async function planImport(sheetGrid: string[][], upload: string[][], ledg
   const passportOwner = new Map([...ledger.students].flatMap(([id, s]) => (s.passportId ? [[s.passportId, id] as const] : [])));
   const rows = combined.results.filter((r) => r.rowNumber >= insertAt).map((r) => {
     const line = lineOf(r.rowNumber)!;
-    // the parser counts rows in the combined grid; point at the file's own lines instead
-    const errors = r.ok ? ledgerErrors(r.record, ledger, emailOwner, passportOwner) : r.errors.map((e) => e.replace(/\(first on row (\d+)\)/, (m, n: string) =>
-      Number(n) >= insertAt ? `(first on line ${lineOf(Number(n))} of this file)` : `(already on row ${n} of the sheet)`));
+    const statusLost = r.ok && hasStatus && !sheetHasStatus && lines[r.rowNumber - insertAt]!.status !== "CONFIRMED";
+    const errors = statusLost
+      ? ["the sheet has no Verification Status column, so this row would count as confirmed. Add the column to the sheet first, or mark the row CONFIRMED"]
+      : r.ok ? ledgerErrors(r.record, ledger, emailOwner, passportOwner)
+      // the parser counts rows in the combined grid; point at the file's own lines instead
+      : r.errors.map((e) => e.replace(/\(first on row (\d+)\)/, (m, n: string) =>
+        Number(n) >= insertAt ? `(first on line ${lineOf(Number(n))} of this file)` : `(already on row ${n} of the sheet)`));
     return { line, recordId: r.recordId, ok: errors.length === 0, errors };
   });
   const valid = rows.flatMap((r, i) => (r.ok ? [{ recordId: r.recordId, values: lines[i]!.values }] : []));

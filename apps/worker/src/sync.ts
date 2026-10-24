@@ -3,7 +3,7 @@
 // from it every run, so a failed write-back simply heals on the next run.
 import { parseSheet, REMOVED_FROM_SHEET, SHEET_HEADERS as H, type SkillRecord } from "@passport/core";
 import {
-  auditLog, eq, inArray, passports, passportVersions, skillAwards, sql, students, syncRuns, type Db,
+  auditLog, desc, eq, inArray, passports, passportVersions, skillAwards, sql, students, syncRuns, type Db,
 } from "@passport/db";
 import type { CellUpdate, SheetSource } from "./sheets.ts";
 
@@ -201,8 +201,15 @@ export async function runSync(
   const problems = [...rowState].filter(([, s]) => s.status === "FAILED")
     .map(([row, s]) => ({ row, recordId: recordIdOf.get(row) ?? "", note: s.note }));
   const summary = { rowsSeen: grid.length, ...result, failedRows: problems.length, problems, cellsWritten: updates.length };
-  // a poll that changed nothing isn't worth a row; the sheet already shows the same state
-  if (opts.trigger === "manual" || summary.newRecords || summary.updatedRecords || summary.removedRecords || summary.newPassports || summary.cellsWritten) {
+  // a poll that changed nothing isn't worth a row; the sheet already shows the same state. but a changed list of
+  // rows to fix is a change: the admin overview reads it from the last saved run, so a fixed or deleted bad row
+  // must not linger there
+  const [lastSaved] = await db.select({ problems: syncRuns.problems }).from(syncRuns)
+    .where(sql`${syncRuns.error} is null`).orderBy(desc(syncRuns.id)).limit(1);
+  // field by field: jsonb hands objects back with their keys reordered
+  const key = (ps: typeof problems) => JSON.stringify(ps.map((p) => [p.row, p.recordId, p.note]));
+  const problemsChanged = key(lastSaved?.problems ?? []) !== key(problems);
+  if (opts.trigger === "manual" || problemsChanged || summary.newRecords || summary.updatedRecords || summary.removedRecords || summary.newPassports || summary.cellsWritten) {
     await db.insert(syncRuns).values({
       trigger: opts.trigger, finishedAt: new Date(), rowsSeen: grid.length,
       newRecords: result.newRecords, failedRecords: problems.length, problems,

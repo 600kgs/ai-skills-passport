@@ -233,6 +233,17 @@ describe("sync log", () => {
     expect(runs[0]?.problems).toEqual([{ row: 6, recordId: "REC-0099", note: expect.stringContaining("bad Student ID") }]);
   });
 
+  it("logs a poll whose rows to fix changed, so a deleted bad row leaves the overview", async () => {
+    const sheet = sheetOf(record(giorgi, "REC-0001"), record({ ...giorgi, id: "BTU-X-0001" }, "REC-0099"));
+    await poll(sheet);
+    await poll(sheet); // the same bad row again: no new run, even though jsonb reorders the stored keys
+    sheet.grid.splice(5, 1); // someone deletes the bad row; nothing in the ledger changes
+    await poll(sheet);
+    await poll(sheet);
+    const runs = await db.select().from(syncRuns).orderBy(syncRuns.id);
+    expect(runs.map((r) => r.problems)).toEqual([[expect.objectContaining({ recordId: "REC-0099" })], []]);
+  });
+
   it("always logs a sync an admin asked for", async () => {
     const sheet = sheetOf(record(giorgi, "REC-0001"));
     await sync(sheet);

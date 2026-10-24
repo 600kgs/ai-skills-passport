@@ -17,7 +17,8 @@ export function AdminNav({ labels, label }: { labels: Labels; label: string }) {
     <nav aria-label={label} className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
       <ul className="flex gap-1">
         {links.map((l) => {
-          const current = path === l.href;
+          // a passport's own page still sits under the passports tab
+          const current = path === l.href || (l.href !== "/admin" && path.startsWith(`${l.href}/`));
           return (
             <li key={l.href}>
               <Link href={l.href} aria-current={current ? "page" : undefined}

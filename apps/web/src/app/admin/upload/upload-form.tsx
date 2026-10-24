@@ -52,15 +52,22 @@ export function UploadForm() {
   return (
     <div className="mt-10">
       <label htmlFor="upload" className="block font-display text-2xl text-ink">{t.fileLabel}</label>
-      <input
-        ref={input}
-        id="upload"
-        type="file"
-        accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        disabled={pending}
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) check(f); }}
-        className="mt-2 block w-full max-w-xl border-2 border-dashed border-[#bdbdbd] bg-panel p-4 file:mr-4 file:border-0 file:bg-magenta file:px-4 file:pt-2 file:pb-1.5 file:font-display file:text-xl file:text-white"
-      />
+      {/* the browser's own picker text ("Choose file") can't be translated, so it's hidden behind ours */}
+      <div className="mt-2 flex max-w-xl flex-wrap items-center gap-4 border-2 border-dashed border-[#bdbdbd] bg-panel p-4 has-[input:focus-visible]:outline-3 has-[input:focus-visible]:outline-magenta">
+        <label htmlFor="upload" className={`bg-magenta px-4 pt-2 pb-1.5 font-display text-xl text-white hover:bg-magenta-deep ${pending ? "opacity-60" : "cursor-pointer"}`}>
+          {t.chooseButton}
+        </label>
+        <span className="min-w-0 truncate text-muted">{file?.name ?? t.noFile}</span>
+        <input
+          ref={input}
+          id="upload"
+          type="file"
+          accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          disabled={pending}
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) check(f); }}
+          className="sr-only"
+        />
+      </div>
 
       <div aria-live="polite">
         {busy === "check" && <p className="mt-4 text-muted">{fill(t.checking, { file: file?.name ?? "" })}</p>}

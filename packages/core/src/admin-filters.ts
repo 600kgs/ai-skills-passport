@@ -48,7 +48,7 @@ export function passportFilters(p: Params): PassportFilters {
 export const ACTIVITY_TYPES = {
   admin: ["record_confirmed", "record_rejected", "sync_requested", "rows_imported", "ledger_reset"],
   issued: ["passport_created", "version_issued"],
-  sheet: ["award_recorded", "award_updated"],
+  sheet: ["award_recorded", "award_updated", "award_removed"],
   email: ["student_notified"],
 } as const;
 export type ActivityType = keyof typeof ACTIVITY_TYPES;

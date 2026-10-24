@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { fill, formatAgo, formatDate } from "@/i18n/format";
 import { getDict } from "@/i18n/server";
-import { overview, pendingRecords } from "@/lib/admin";
+import { overview, pendingRecords, removedRecords } from "@/lib/admin";
 import { DecisionButtons, SyncButton } from "./buttons";
 import { requireAdmin } from "./guard";
 
@@ -8,7 +9,7 @@ const LOW_BALANCE_ISSUES = 20;
 
 export default async function AdminOverviewPage() {
   await requireAdmin();
-  const [d, o, pending] = await Promise.all([getDict(), overview(), pendingRecords()]);
+  const [d, o, pending, removed] = await Promise.all([getDict(), overview(), pendingRecords(), removedRecords()]);
   const t = d.admin.overview;
   const { counts, lastRun, issuer } = o;
   const ago = (x: Date) => formatAgo(d.locale, x);
@@ -70,6 +71,27 @@ export default async function AdminOverviewPage() {
           </>
         )}
       </section>
+
+      {removed.length > 0 && (
+        <section aria-labelledby="removed-h" className="mt-14">
+          <h2 id="removed-h" className="flex items-baseline gap-3 border-b-4 border-blue pb-2 font-display text-4xl text-ink">
+            {t.removedTitle} <span className="bg-magenta px-2 text-3xl text-white">{removed.length}</span>
+          </h2>
+          <p className="mt-4 max-w-prose text-muted">{t.removedHelp}</p>
+          <ul className="mt-4 space-y-3">
+            {removed.map((r) => (
+              <li key={r.recordId} className="border-l-8 border-magenta bg-panel p-4">
+                <p className="font-display text-xl text-ink">
+                  {r.recordId}: {r.skillName}, {r.passportId
+                    ? <Link href={`/admin/passports/${r.passportId}`} className="underline decoration-magenta decoration-2 underline-offset-2 hover:text-magenta">{r.firstName} {r.lastName}</Link>
+                    : <>{r.firstName} {r.lastName}</>}
+                </p>
+                <p className="mt-1">{r.state === "applied" ? fill(t.removedIssued, { passport: r.passportId ?? "", v: r.versionNo ?? "?" }) : t.removedHeld}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section aria-labelledby="problems-h" className="mt-14">
         <h2 id="problems-h" className="flex items-baseline gap-3 border-b-4 border-blue pb-2 font-display text-4xl text-ink">

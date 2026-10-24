@@ -1,7 +1,7 @@
 // one sync run: sheet -> ledger -> status back into the sheet -> issue jobs.
 // the ledger (postgres) is the truth. the sheet's status columns are recomputed
 // from it every run, so a failed write-back simply heals on the next run.
-import { parseSheet, SHEET_HEADERS as H, type SkillRecord } from "@passport/core";
+import { parseSheet, REMOVED_FROM_SHEET, SHEET_HEADERS as H, type SkillRecord } from "@passport/core";
 import {
   auditLog, eq, inArray, passports, passportVersions, skillAwards, sql, students, syncRuns, type Db,
 } from "@passport/db";
@@ -12,6 +12,7 @@ export type SyncSummary = {
   rowsSeen: number;
   newRecords: number;
   updatedRecords: number;
+  removedRecords: number;
   failedRows: number;
   problems: { row: number; recordId: string; note: string }[];
   newPassports: number;
@@ -134,6 +135,12 @@ export async function runSync(
           continue;
         }
         if (award.state === "applied") {
+          // the row is back after being deleted: drop the flag
+          if (award.error === REMOVED_FROM_SHEET) {
+            await tx.update(skillAwards).set({ error: null, updatedAt: new Date() }).where(eq(skillAwards.recordId, r.recordId));
+            updatedRecords++;
+            audit.push({ actor: "system", action: "award_updated", subject: r.recordId, details: { state: "applied" } });
+          }
           const v = award.appliedInVersionId ? versions.get(award.appliedInVersionId) : undefined;
           const issued = { version: v ? `V${v.versionNo}` : "", syncedAt: v?.issuedAt ? fmtUtc(v.issuedAt) : "", passportId, firstIssued };
           if (award.rowHash !== r.rowHash) {
@@ -153,17 +160,37 @@ export async function runSync(
       }
     }
 
+    // records whose row was deleted from the sheet. an issued one stays issued (the pdf may be out in the
+    // world, and the chain can't forget it) and is only flagged; one not issued yet is held, so a deleted
+    // row never becomes a new version. putting the row back undoes both, above.
+    // a read with no records at all (a google glitch, the wrong tab) isn't taken as "everything was deleted"
+    let removedRecords = 0;
+    const inSheet = new Set(parsed.results.map((r) => r.recordId).filter(Boolean));
+    if (inSheet.size) {
+      const ledger = await tx.select({ recordId: skillAwards.recordId, studentId: skillAwards.studentId, state: skillAwards.state, error: skillAwards.error })
+        .from(skillAwards);
+      for (const a of ledger) {
+        if (inSheet.has(a.recordId) || a.error === REMOVED_FROM_SHEET) continue;
+        const issued = a.state === "applied";
+        await tx.update(skillAwards)
+          .set(issued ? { error: REMOVED_FROM_SHEET, updatedAt: new Date() } : { state: "failed", error: REMOVED_FROM_SHEET, updatedAt: new Date() })
+          .where(eq(skillAwards.recordId, a.recordId));
+        removedRecords++;
+        audit.push({ actor: "system", action: "award_removed", subject: a.recordId, details: { studentId: a.studentId, issued } });
+      }
+    }
+
     // every passport still waiting on a confirmed skill gets a job, so missed jobs self-heal
     const queued = (await tx.selectDistinct({ passportId: passports.passportId }).from(skillAwards)
       .innerJoin(passports, eq(passports.studentId, skillAwards.studentId))
       .where(eq(skillAwards.state, "pending"))).map((p) => p.passportId);
 
     if (audit.length) await tx.insert(auditLog).values(audit);
-    return { newRecords, updatedRecords, newPassports, queued };
+    return { newRecords, updatedRecords, removedRecords, newPassports, queued };
   });
 
   if (!result) {
-    return { skipped: "locked", rowsSeen: grid.length, newRecords: 0, updatedRecords: 0, failedRows: 0, problems: [], newPassports: 0, queued: [], cellsWritten: 0 };
+    return { skipped: "locked", rowsSeen: grid.length, newRecords: 0, updatedRecords: 0, removedRecords: 0, failedRows: 0, problems: [], newPassports: 0, queued: [], cellsWritten: 0 };
   }
 
   const updates = cellUpdates(grid, parsed.columns, rowState);
@@ -175,7 +202,7 @@ export async function runSync(
     .map(([row, s]) => ({ row, recordId: recordIdOf.get(row) ?? "", note: s.note }));
   const summary = { rowsSeen: grid.length, ...result, failedRows: problems.length, problems, cellsWritten: updates.length };
   // a poll that changed nothing isn't worth a row; the sheet already shows the same state
-  if (opts.trigger === "manual" || summary.newRecords || summary.updatedRecords || summary.newPassports || summary.cellsWritten) {
+  if (opts.trigger === "manual" || summary.newRecords || summary.updatedRecords || summary.removedRecords || summary.newPassports || summary.cellsWritten) {
     await db.insert(syncRuns).values({
       trigger: opts.trigger, finishedAt: new Date(), rowsSeen: grid.length,
       newRecords: result.newRecords, failedRecords: problems.length, problems,

@@ -50,6 +50,9 @@ const REQUIRED = [H.studentId, H.firstName, H.lastName, H.email, H.program, H.ed
 const STUDENT_FIELDS = [H.firstName, H.lastName, H.email, H.passportId, H.firstIssued];
 
 export const SHEET_HEADERS = H;
+
+// the ledger note on a record whose row was deleted from the sheet; the admin overview lists these
+export const REMOVED_FROM_SHEET = "no longer in the sheet";
 export const normHeader = (s: unknown) => String(s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 

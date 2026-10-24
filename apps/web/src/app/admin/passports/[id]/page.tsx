@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { REMOVED_FROM_SHEET } from "@passport/core";
 import { fill, formatDate, formatDateTime } from "@/i18n/format";
 import { getDict } from "@/i18n/server";
 import { loggedVersion, passportDetail } from "@/lib/admin";
@@ -17,6 +18,7 @@ export default async function AdminPassportPage({ params }: PageProps<"/admin/pa
   const cluster = process.env.SOLANA_RPC_URL?.includes("devnet") ? "?cluster=devnet" : "";
 
   const recordStatus = (r: (typeof p.records)[number]) => {
+    if (r.state !== "applied" && r.error === REMOVED_FROM_SHEET) return t.recordStates.removed;
     if (r.state === "applied") return fill(t.recordStates.applied, { n: r.appliedIn ?? "?" });
     if (r.state === "ignored") return r.verification === "REJECTED" ? t.recordStates.rejected : t.recordStates.awaiting;
     return t.recordStates[r.state];
@@ -106,7 +108,7 @@ export default async function AdminPassportPage({ params }: PageProps<"/admin/pa
                   <td className="py-3 pr-4">{r.category}</td>
                   <td className={`py-3 ${r.state === "failed" || r.state === "conflict" ? "font-semibold text-magenta" : "text-ink"}`}>
                     {recordStatus(r)}
-                    {r.error && <span className="block text-sm font-normal text-muted">{r.error}</span>}
+                    {r.error && <span className="block text-sm font-normal text-muted">{r.error === REMOVED_FROM_SHEET ? t.removedNote : r.error}</span>}
                   </td>
                 </tr>
               ))}

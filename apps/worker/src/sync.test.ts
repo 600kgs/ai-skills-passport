@@ -1,7 +1,8 @@
 // sync scenarios from the brief's demo table, against a real postgres (docker compose `db`)
 import pg from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { createDb, eq, passports, passportVersions, skillAwards, sql, students, syncRuns, type Db } from "@passport/db";
+import { REMOVED_FROM_SHEET } from "@passport/core";
+import { auditLog, createDb, eq, inArray, passports, passportVersions, skillAwards, sql, students, syncRuns, type Db } from "@passport/db";
 import { runMigrations } from "@passport/db/migrate";
 import type { CellUpdate, SheetSource } from "./sheets.ts";
 import { planImport } from "./import.ts";
@@ -149,8 +150,79 @@ describe("sheet sync", () => {
   });
 });
 
+describe("rows deleted from the sheet", () => {
+  // giorgi gets REC-0001 and REC-0002; the issue job is simulated by putting the given records into an issued V1
+  const issueV1 = async (...recordIds: string[]) => {
+    const [v] = await db.insert(passportVersions).values({
+      passportId: "BTU-AI-000125", versionNo: 1, verificationCode: "AAAA-BBBB-CC", state: "issued", skillCount: recordIds.length,
+      includedRecordIds: recordIds, pdfSha256: "x", txSignature: "y", issuedAt: new Date("2026-10-21T12:00:00Z"),
+    }).returning();
+    await db.update(skillAwards).set({ state: "applied", appliedInVersionId: v!.id }).where(inArray(skillAwards.recordId, recordIds));
+  };
+  const award = async (id: string) => (await db.select().from(skillAwards).where(eq(skillAwards.recordId, id)))[0]!;
+  const removedLog = () => db.select().from(auditLog).where(eq(auditLog.action, "award_removed"));
+
+  it("keeps an issued skill whose row was deleted, flags it once, and drops the flag when the row is back", async () => {
+    const second = record(giorgi, "REC-0002", "Prompt Engineering");
+    const sheet = sheetOf(record(giorgi, "REC-0001"), second);
+    await sync(sheet);
+    await issueV1("REC-0001", "REC-0002");
+
+    sheet.grid.splice(5, 1);
+    expect((await sync(sheet)).removedRecords).toBe(1);
+    expect(await award("REC-0002")).toMatchObject({ state: "applied", error: REMOVED_FROM_SHEET });
+    expect(await removedLog()).toHaveLength(1);
+    expect((await sync(sheet)).removedRecords).toBe(0);
+    expect(await removedLog()).toHaveLength(1);
+
+    sheet.grid.splice(5, 0, second);
+    await sync(sheet);
+    expect(await award("REC-0002")).toMatchObject({ state: "applied", error: null });
+    expect(sheet.cell(6, "Passport Sync Status")).toBe("SYNCED");
+  });
+
+  it("holds a confirmed skill deleted before it was issued, and issues it once the row is back", async () => {
+    const second = record(giorgi, "REC-0002", "Prompt Engineering");
+    const sheet = sheetOf(record(giorgi, "REC-0001"), second);
+    await sync(sheet);
+    await issueV1("REC-0001");
+
+    sheet.grid.splice(5, 1);
+    queued.length = 0;
+    await sync(sheet);
+    expect(await award("REC-0002")).toMatchObject({ state: "failed", error: REMOVED_FROM_SHEET });
+    expect(queued).toEqual([]);
+
+    sheet.grid.splice(5, 0, second);
+    await sync(sheet);
+    expect(await award("REC-0002")).toMatchObject({ state: "pending", error: null });
+    expect(queued).toEqual(["BTU-AI-000125"]);
+  });
+
+  it("takes a deleted PENDING row out of the waiting list, and puts it back with the row", async () => {
+    const waiting = record(giorgi, "REC-0002", "Prompt Engineering", "PENDING");
+    const sheet = sheetOf(record(giorgi, "REC-0001"), waiting);
+    await sync(sheet);
+    expect(await award("REC-0002")).toMatchObject({ state: "ignored", verification: "PENDING" });
+
+    sheet.grid.splice(5, 1);
+    await sync(sheet);
+    expect(await award("REC-0002")).toMatchObject({ state: "failed", error: REMOVED_FROM_SHEET });
+
+    sheet.grid.splice(5, 0, waiting);
+    await sync(sheet);
+    expect(await award("REC-0002")).toMatchObject({ state: "ignored", error: null });
+  });
+
+  it("doesn't take a read without any records as everything deleted", async () => {
+    await sync(sheetOf(record(giorgi, "REC-0001")));
+    expect((await sync(sheetOf())).removedRecords).toBe(0);
+    expect(await award("REC-0001")).toMatchObject({ error: null });
+  });
+});
+
 describe("sync log", () => {
-  const poll = (s: SheetSource) => runSync(db, s, { trigger: "poll", enqueue: async () => {}, today: "2026-10-21" });
+  const poll =(s: SheetSource) => runSync(db, s, { trigger: "poll", enqueue: async () => {}, today: "2026-10-21" });
 
   it("logs polls that change something, with the rows it couldn't take, and skips quiet ones", async () => {
     const sheet = sheetOf(record(giorgi, "REC-0001"), record({ ...giorgi, id: "BTU-X-0001" }, "REC-0099"));

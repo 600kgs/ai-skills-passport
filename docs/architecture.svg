@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="Architecture of the BTU AI Skills Digital Passport">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#333"/></marker>
+    <marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#fe017e"/></marker>
+    <style>
+      .box { fill: #fff; stroke: #333; stroke-width: 1.5 }
+      .ext { fill: #f2f2f2; stroke: #8a8a8a; stroke-width: 1.5; stroke-dasharray: 5 4 }
+      .t { font-size: 15px; font-weight: bold; fill: #111 }
+      .th { font-size: 15px; font-weight: bold; fill: #fff }
+      .s { font-size: 12px; fill: #444 }
+      .zone { font-size: 13px; font-weight: bold; letter-spacing: 1px; fill: #0000b5 }
+      .l { stroke: #333; stroke-width: 1.6; fill: none; marker-end: url(#a) }
+      .lm { stroke: #fe017e; stroke-width: 2.2; fill: none; marker-end: url(#m) }
+      .lab { font-size: 11px; fill: #333 }
+      .labm { font-size: 11.5px; fill: #c4005f; font-weight: bold }
+    </style>
+  </defs>
+  <rect width="1000" height="600" fill="#fff"/>
+
+  <!-- zones -->
+  <text x="20" y="64" class="zone">BTU</text>
+  <rect x="250" y="44" width="500" height="526" fill="#f6f6ff" stroke="#0000b5" stroke-width="1.5"/>
+  <text x="266" y="66" class="zone">SERVER (DOCKER COMPOSE)</text>
+  <text x="780" y="64" class="zone">PUBLIC</text>
+
+  <!-- btu side -->
+  <rect x="20" y="80" width="200" height="66" class="ext"/>
+  <text x="34" y="106" class="t">BTU staff</text>
+  <text x="34" y="126" class="s">enter confirmed skills</text>
+  <rect x="20" y="200" width="200" height="86" class="ext"/>
+  <text x="34" y="226" class="t">Google Sheet</text>
+  <text x="34" y="246" class="s">the source of truth for</text>
+  <text x="34" y="263" class="s">confirmed skill records</text>
+
+  <!-- worker -->
+  <rect x="280" y="80" width="200" height="206" class="box"/>
+  <rect x="280" y="80" width="200" height="30" fill="#0000b5"/>
+  <text x="292" y="101" class="th">Worker</text>
+  <text x="292" y="132" class="s">sync every 15 s: read, validate,</text>
+  <text x="292" y="149" class="s">record, write status back</text>
+  <text x="292" y="174" class="s">issue queue (pg-boss):</text>
+  <text x="292" y="191" class="s">render, store, attest</text>
+  <text x="292" y="216" class="s">notify queue: email the student</text>
+  <text x="292" y="241" class="s">admin jobs: confirm, reject,</text>
+  <text x="292" y="258" class="s">Excel import, sync now</text>
+
+  <!-- web -->
+  <rect x="520" y="80" width="200" height="206" class="box"/>
+  <rect x="520" y="80" width="200" height="30" fill="#0000b5"/>
+  <text x="532" y="101" class="th">Web (Next.js)</text>
+  <text x="532" y="132" class="s">verify page: public, no login</text>
+  <text x="532" y="157" class="s">student: BTU Google sign-in,</text>
+  <text x="532" y="174" class="s">download, share to LinkedIn</text>
+  <text x="532" y="199" class="s">admin: status, confirm/reject,</text>
+  <text x="532" y="216" class="s">Excel upload, activity</text>
+  <text x="532" y="241" class="s">issuer file on the domain</text>
+  <text x="532" y="258" class="s">(/.well-known)</text>
+
+  <!-- gotenberg, storage, db -->
+  <rect x="280" y="330" width="200" height="62" class="box"/>
+  <text x="292" y="356" class="t">Gotenberg</text>
+  <text x="292" y="376" class="s">HTML to PDF in BTU's design</text>
+  <rect x="280" y="430" width="200" height="62" class="box"/>
+  <text x="292" y="456" class="t">PDF storage</text>
+  <text x="292" y="476" class="s">each file once, named by its hash</text>
+  <rect x="520" y="330" width="200" height="162" class="box"/>
+  <rect x="520" y="330" width="200" height="30" fill="#0000b5"/>
+  <text x="532" y="351" class="th">PostgreSQL ledger</text>
+  <text x="532" y="382" class="s">students, passports</text>
+  <text x="532" y="399" class="s">skill records and their state</text>
+  <text x="532" y="416" class="s">versions: code, hash, tx</text>
+  <text x="532" y="433" class="s">sync runs, audit log</text>
+  <text x="532" y="450" class="s">job queue tables</text>
+
+  <!-- public side -->
+  <rect x="780" y="80" width="200" height="86" class="ext"/>
+  <text x="794" y="106" class="t">Solana (devnet)</text>
+  <text x="794" y="126" class="s">Attestation Service: per version</text>
+  <text x="794" y="143" class="s">only hash + version number</text>
+  <rect x="780" y="210" width="200" height="66" class="ext"/>
+  <text x="794" y="236" class="t">Employer</text>
+  <text x="794" y="256" class="s">code + PDF, no account</text>
+  <rect x="780" y="330" width="200" height="66" class="ext"/>
+  <text x="794" y="356" class="t">Student</text>
+  <text x="794" y="376" class="s">signs in, downloads, shares</text>
+  <rect x="780" y="440" width="200" height="66" class="ext"/>
+  <text x="794" y="466" class="t">Brevo</text>
+  <text x="794" y="486" class="s">email to the student</text>
+
+  <!-- staff to sheet, sheet to worker and back -->
+  <path d="M120 146 V196" class="l"/>
+  <path d="M220 228 H276" class="l"/>
+  <text x="228" y="221" class="lab">read</text>
+  <path d="M276 262 H224" class="l"/>
+  <text x="228" y="280" class="lab">status</text>
+
+  <!-- worker internals -->
+  <path d="M380 286 V326" class="l"/>
+  <path d="M380 392 V426" class="l"/>
+  <path d="M480 204 H498 V360 H516" class="l"/>
+  <path d="M620 286 V326" class="l"/>
+
+  <!-- the chain: worker writes, employer reads -->
+  <path d="M380 80 V24 H880 V76" class="lm"/>
+  <text x="520" y="18" class="labm">attest each version: hash + version</text>
+  <path d="M880 210 V170" class="lm"/>
+  <text x="886" y="196" class="labm">reads it directly</text>
+
+  <!-- people to the web app -->
+  <path d="M776 243 H724" class="l"/>
+  <path d="M776 363 H750 V250 H724" class="l"/>
+
+  <!-- email -->
+  <path d="M480 270 H508 V520 H880 V510" class="l"/>
+  <text x="560" y="514" class="lab">email on each new version</text>
+</svg>

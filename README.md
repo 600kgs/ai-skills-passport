@@ -4,4 +4,6 @@ Issues, updates and verifies BTU's AI Skills Digital Passports. Confirmed skills
 
 Built by team **Git Happens** for the BTU AI Skills Digital Passport hackathon (October 2026).
 
-Status: work in progress.
+Status: live test deployment at https://passport.btumarket.ge (Solana devnet, test issuer).
+
+- Architecture and scalability: [English](docs/ARCHITECTURE.md), [ქართული](docs/ARCHITECTURE.ka.md)

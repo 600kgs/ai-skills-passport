@@ -2,9 +2,16 @@ import type { Locale } from "./dictionaries";
 
 const intlLocale = (l: Locale) => (l === "ka" ? "ka-GE" : "en-GB");
 
-// "24 October 2026" / "24 ოქტომბერი, 2026", in tbilisi time
-export const formatDate = (locale: Locale, d: Date | string) =>
-  new Date(d).toLocaleDateString(intlLocale(locale), { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Tbilisi" });
+const KA_MONTHS = ["იანვარი", "თებერვალი", "მარტი", "აპრილი", "მაისი", "ივნისი", "ივლისი", "აგვისტო", "სექტემბერი", "ოქტომბერი", "ნოემბერი", "დეკემბერი"];
+
+// "24 October 2026" / "24 ოქტომბერი, 2026", in tbilisi time. browsers often ship without georgian date
+// data (chrome on windows falls back to "October 24, 2026"), so the georgian month names are ours
+export function formatDate(locale: Locale, d: Date | string) {
+  const date = new Date(d);
+  if (locale !== "ka") return date.toLocaleDateString(intlLocale(locale), { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Tbilisi" });
+  const [year, month, day] = date.toLocaleDateString("en-CA", { timeZone: "Asia/Tbilisi" }).split("-").map(Number);
+  return `${day} ${KA_MONTHS[month! - 1]}, ${year}`;
+}
 
 export const formatDateTime = (locale: Locale, d: Date) =>
   d.toLocaleString(intlLocale(locale), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Tbilisi" });

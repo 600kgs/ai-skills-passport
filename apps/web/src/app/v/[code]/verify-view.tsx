@@ -3,7 +3,7 @@
 // verification runs in the visitor's browser: the record comes straight from solana,
 // the pdf is hashed locally and never uploaded. our server only says "latest or not".
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { findRecord, normalizeCode, sha256, verdict, type ChainRecord } from "@passport/core";
 import type { IssuerDocument } from "@/app/.well-known/btu-passport-issuer.json/route";
 import type { VerifyInfo } from "@/app/api/verify/[code]/route";
@@ -26,6 +26,14 @@ export default function VerifyView() {
   const [info, setInfo] = useState<VerifyInfo | null>(null);
   const [file, setFile] = useState<{ name: string; hash: Uint8Array } | null>(null);
   const [dragging, setDragging] = useState(false);
+  const verdictRef = useRef<HTMLDivElement>(null);
+
+  // the verdict sits at the top and the drop area further down: after a check, bring the answer into view
+  // if it isn't already (on a phone it's off screen). no behavior given, so the css decides: smooth, or
+  // instant for reduced motion
+  useEffect(() => {
+    if (file) verdictRef.current?.scrollIntoView({ block: "nearest" });
+  }, [file]);
 
   useEffect(() => {
     if (!code) return;
@@ -58,7 +66,7 @@ export default function VerifyView() {
         <div className="mx-auto max-w-6xl px-4 pt-20 pb-12 sm:pt-24">
           <p className="font-display text-2xl text-blue">{v_.codeLabel}</p>
           <p className="font-display text-5xl tracking-wider text-ink sm:text-6xl">{code ?? v_.invalidCode}</p>
-          <div className="mt-8">
+          <div ref={verdictRef} className="mt-8 scroll-mt-6">
             {record.state === "error"
               ? <p role="alert" className="border-l-[12px] border-magenta bg-white p-6 text-lg">{v_.chainError}</p>
               : <VerdictStamp outcome={outcome} extra={v.outcome === "authentic-outdated" ? outdatedNote : undefined} />}

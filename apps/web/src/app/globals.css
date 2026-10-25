@@ -57,5 +57,10 @@ h1, h2, h3 { overflow-wrap: anywhere; }
 
 :focus-visible { outline: 3px solid var(--magenta); outline-offset: 2px; }
 
+/* in-page links (how it works, skip to content) glide instead of jumping; html's data-scroll-behavior
+   tells next to switch it off while changing pages, so a new page doesn't scroll from the old position */
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
 /* btu.edu.ge's logo tile: 68% white, so whatever is behind it shows through */
 .logo-tile { background: rgb(255 255 255 / 0.68); }

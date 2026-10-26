@@ -29,6 +29,8 @@ services:
       DATABASE_URL: postgres://passport:${POSTGRES_PASSWORD}@db:5432/passport
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?}
       SOLANA_RPC_URL: ${SOLANA_RPC_URL:?}
+      # published in the issuer file for browsers; never a keyed url
+      PUBLIC_SOLANA_RPC_URL: ${PUBLIC_SOLANA_RPC_URL:-https://api.devnet.solana.com}
       AUTHORITY_ADDRESS: ${AUTHORITY_ADDRESS:?}
       AUTH_SECRET: ${AUTH_SECRET:?}
       AUTH_GOOGLE_ID: ${AUTH_GOOGLE_ID:?}

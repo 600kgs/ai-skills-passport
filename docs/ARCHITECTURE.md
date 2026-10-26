@@ -80,7 +80,7 @@ Our server only adds whether a version is the latest. A command-line verifier (`
 
 ## 7. Scalability: 5,000+ issues and updates a year
 
-Measured on 24 October 2026. Sync and PDF figures come from a developer PC; issue time comes from the live server (Azure, 2 vCPU, 4 GB).
+Measured on 24 October 2026, live issue figures updated 26 October. Sync and PDF figures come from a developer PC; issue time comes from the live server (Azure, 2 vCPU, 4 GB).
 
 | What | Measured |
 |---|---|
@@ -90,8 +90,8 @@ Measured on 24 October 2026. Sync and PDF figures come from a developer PC; issu
 | Sync with one new record | 0.34 s |
 | Render one passport (1 to 12 skills) | about 0.5 s, 245 to 285 KB |
 | Render 8 passports at once | 1.7 s in total |
-| Confirm click to issued version, live | about 3 s |
-| One version on chain | 0.00172212 SOL deposit (refundable on close) + 0.000005 SOL fee |
+| Confirm click to issued version / to chain only, live | about 3 s / 1.6 to 2.5 s (43 versions, 0 failed) |
+| One version on chain | 0.00172212 SOL deposit (back only by closing the record, which ends its verification) + 0.000005 SOL fee |
 
 **What 5,000 versions a year means:**
 - **Load:** about 14 versions a day on average. The 15-second sync takes well under a second even at 5,000 rows, and reading the sheet uses 4 requests a minute, far below Google's per-minute limit.
@@ -105,7 +105,7 @@ Measured on 24 October 2026. Sync and PDF figures come from a developer PC; issu
 |---|---|---|
 | Deposit per version | Mainnet, from the first year | **Batch:** one attestation per day holding a Merkle root of that day's versions, with each PDF carrying its short proof. About 365 deposits a year instead of 5,000 (about 0.63 SOL). |
 | One issue at a time | Large cohort bursts | Raise the worker's parallelism; split Gotenberg onto its own container. |
-| Public Solana RPC rate limits | Any real load | A paid RPC provider. |
+| Public Solana RPC rate limits | Any real load | **Done for the server (26 October):** a keyed provider endpoint; browsers keep a keyless one from the issuer file, so verification never depends on our key. |
 | Sheet size | Google allows 10 million cells, about 470,000 rows at 21 columns (decades of records) | Archive past years into separate tabs, or read from BTU's student system directly. |
 | PDF storage on the server disk | Rollout | Object storage (Azure Blob) with backups. |
 

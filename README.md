@@ -2,9 +2,11 @@
 
 [![ci](https://github.com/600kgs/ai-skills-passport/actions/workflows/ci.yml/badge.svg)](https://github.com/600kgs/ai-skills-passport/actions/workflows/ci.yml)
 
+**[ქართული ვერსია](README.ka.md)**
+
 BTU confirms a student's AI skill in its Google Sheet. Seconds later the student has a new version of their multi-page PDF passport in BTU's design, its fingerprint is on the Solana blockchain, and anyone can check that the PDF is genuine, without an account and without having to trust our server.
 
-Built by team **Git Happens** (Oto Sepashvili, Nika Loliashvili) for the BTU AI Skills Digital Passport hackathon, October 2026. [ქართული: არქიტექტურა](docs/ARCHITECTURE.ka.md)
+Built by team **Git Happens** (Oto Sepashvili, Nika Loliashvili) for the BTU AI Skills Digital Passport hackathon, October 2026.
 
 **Try it:** the live test deployment runs at **https://passport.btumarket.ge** (Solana devnet, test issuer). A real issued record: [/v/R24Z-0RS5-R8](https://passport.btumarket.ge/v/R24Z-0RS5-R8), and the same record on [Solana Explorer](https://explorer.solana.com/address/7ZtJ8CD3pacXJEDgLvwK4qhkwnWAMYjjkSvHigm6sUHB?cluster=devnet).
 

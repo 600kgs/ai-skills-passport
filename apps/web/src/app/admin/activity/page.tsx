@@ -32,7 +32,7 @@ export default async function AdminActivityPage({ searchParams }: PageProps<"/ad
       <section aria-labelledby="audit-h">
         <h2 id="audit-h" className="border-b-4 border-blue pb-2 font-display text-4xl text-ink">{t.auditTitle}</h2>
         <p className="mt-3 text-sm text-muted">{t.auditNote}</p>
-        <form action="/admin/activity" className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+        <form action="/admin/activity" className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
           {f.problemsOnly && <input type="hidden" name="problems" value="1" />}
           <label className="flex flex-col gap-1 sm:col-span-2">
             <span className="font-display text-xl text-ink">{t.show}</span>

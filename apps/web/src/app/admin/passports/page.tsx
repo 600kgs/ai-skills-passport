@@ -33,7 +33,7 @@ export default async function AdminPassportsPage({ searchParams }: PageProps<"/a
   return (
     <section aria-labelledby="passports-h" className="mt-10">
       {/* search gets its own row, so the dropdowns are wide enough for long program names and georgian labels */}
-      <form action="/admin/passports" className="grid gap-3 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto]">
+      <form action="/admin/passports" className="grid grid-cols-1 gap-3 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto]">
         {f.sort !== "newest" && <input type="hidden" name="sort" value={f.sort} />}
         <label className="flex flex-col gap-1 lg:col-span-4">
           <span className="font-display text-xl text-ink">{t.search}</span>

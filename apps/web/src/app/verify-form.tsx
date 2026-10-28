@@ -31,7 +31,7 @@ export function VerifyForm() {
           spellCheck={false}
           aria-invalid={error}
           aria-describedby={error ? "code-error" : "code-hint"}
-          className="h-14 min-w-0 flex-1 bg-white px-4 text-xl uppercase tracking-wider text-ink outline-none placeholder:normal-case placeholder:tracking-normal placeholder:text-muted focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-magenta"
+          className="h-14 w-full min-w-0 bg-white sm:flex-1 px-4 text-xl uppercase tracking-wider text-ink outline-none placeholder:normal-case placeholder:tracking-normal placeholder:text-muted focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-magenta"
         />
         <button type="submit" className="h-14 bg-magenta px-8 pt-1 font-display text-3xl text-white hover:bg-magenta-deep focus-visible:outline-white">
           {t.verify}

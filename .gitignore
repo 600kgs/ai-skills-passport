@@ -17,6 +17,8 @@ service-account*.json
 
 # generated passports and local data
 *.pdf
+# real issued pdfs the live check verifies against the chain
+!apps/worker/live/fixtures/*.pdf
 storage/
 *.log
 

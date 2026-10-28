@@ -33,5 +33,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
+      # reads the live site and the public chain with real issued pdfs, like a third party would
+      - run: pnpm --filter @passport/worker test:live
       - run: pnpm --filter @passport/web lint
       - run: pnpm --filter @passport/web build

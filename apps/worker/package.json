@@ -7,6 +7,7 @@
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run",
+    "test:live": "vitest run --config vitest.live.config.ts",
     "setup-issuer": "tsx scripts/setup-issuer.ts",
     "verify": "tsx scripts/verify.ts",
     "rotate-issuer": "tsx scripts/rotate-issuer.ts",

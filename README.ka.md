@@ -75,7 +75,7 @@ Google ცხრილი → **worker** (სინქრონიზაცი�
 
 ## ტექნოლოგიები
 
-TypeScript ყველგან, ამიტომ ანაბეჭდის და ბლოკჩეინის კითხვის კოდი ერთი და იგივეა სერვერზეც და შემმოწმებლის ბრაუზერშიც. Next.js 16 (საიტი), Node worker pg-boss-ით (რიგი Postgres-ში), PostgreSQL 17 და Drizzle, Gotenberg (headless Chromium) PDF-ისთვის, `@solana/kit` + `sas-lib`, Google Sheets API service account-ით, Better Auth (მხოლოდ BTU-ს Google ანგარიშები), Brevo მეილისთვის. ეშვება Docker Compose-ით, Caddy-ს უკან, ერთ ვირტუალურ მანქანაზე; GitHub Actions ყოველ ატვირთვაზე ამოწმებს ტიპებს, lint-ს, დაახლოებით 90 ტესტს და build-ს.
+TypeScript ყველგან, ამიტომ ანაბეჭდის და ბლოკჩეინის კითხვის კოდი ერთი და იგივეა სერვერზეც და შემმოწმებლის ბრაუზერშიც. Next.js 16 (საიტი), Node worker pg-boss-ით (რიგი Postgres-ში), PostgreSQL 17 და Drizzle, Gotenberg (headless Chromium) PDF-ისთვის, `@solana/kit` + `sas-lib`, Google Sheets API service account-ით, Better Auth (მხოლოდ BTU-ს Google ანგარიშები), Brevo მეილისთვის. ეშვება Docker Compose-ით, Caddy-ს უკან, ერთ ვირტუალურ მანქანაზე; GitHub Actions ყოველ ატვირთვაზე ამოწმებს ტიპებს, lint-ს, დაახლოებით 90 ტესტს და build-ს, და ცოცხალ შემოწმებასაც: ნამდვილ გაცემულ PDF-ებს (და პიჩის ყალბ PDF-საც) საჯარო ბლოკჩეინთან ადარებს, ისე როგორც მესამე მხარე: `pnpm --filter @passport/worker test:live`.
 
 ```
 apps/web        საიტი: შემოწმება, სტუდენტის გვერდი, ადმინი, გამცემის ფაილი

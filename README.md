@@ -75,7 +75,7 @@ From the optional extras: a QR code on every PDF page, an admin panel (status, c
 
 ## Stack
 
-TypeScript everywhere, so the hashing and chain-reading code is the same on the server and in the verifier's browser. Next.js 16 (site), a Node worker with pg-boss (queue in Postgres), PostgreSQL 17 with Drizzle, Gotenberg (headless Chromium) for the PDF, `@solana/kit` + `sas-lib`, Google Sheets API with a service account, Better Auth (BTU Google accounts only), Brevo for email. Runs as Docker Compose behind Caddy on one VM; GitHub Actions runs typecheck, lint, about 90 tests and a build on every push.
+TypeScript everywhere, so the hashing and chain-reading code is the same on the server and in the verifier's browser. Next.js 16 (site), a Node worker with pg-boss (queue in Postgres), PostgreSQL 17 with Drizzle, Gotenberg (headless Chromium) for the PDF, `@solana/kit` + `sas-lib`, Google Sheets API with a service account, Better Auth (BTU Google accounts only), Brevo for email. Runs as Docker Compose behind Caddy on one VM; GitHub Actions runs typecheck, lint, about 90 tests and a build on every push, plus a live check that verifies real issued PDFs (and the forged one from the pitch) against the public chain, the way a third party would: `pnpm --filter @passport/worker test:live`.
 
 ```
 apps/web        site: verify page, student page, admin, issuer file

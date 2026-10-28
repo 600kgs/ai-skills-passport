@@ -47,6 +47,11 @@ export const skillAwards = pgTable("skill_awards", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("skill_awards_student_idx").on(t.studentId)]);
 
+export type VersionSkill = {
+  recordId: string; rowHash: string; verification: string; skillName: string; category: string;
+  description: string; earnedThrough: string | null; dateEarned: string;
+};
+
 export const passportVersions = pgTable("passport_versions", {
   id: serial("id").primaryKey(),
   passportId: text("passport_id").notNull().references(() => passports.passportId),
@@ -56,6 +61,9 @@ export const passportVersions = pgTable("passport_versions", {
   skillCount: integer("skill_count").notNull(),
   // exactly which award records this version contains, fixed when the version is created
   includedRecordIds: text("included_record_ids").array().notNull().default(sql`'{}'::text[]`),
+  // and what those records said at that moment: the pdf is rendered from this, never from the live rows.
+  // null on versions issued before it existed
+  skills: jsonb("skills").$type<VersionSkill[]>(),
   pdfSha256: text("pdf_sha256"),
   pdfPath: text("pdf_path"),
   attestationAddress: text("attestation_address"),

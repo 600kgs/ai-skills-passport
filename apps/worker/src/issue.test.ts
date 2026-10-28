@@ -2,7 +2,7 @@
 import pg from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { equalBytes, sha256 } from "@passport/core";
-import { createDb, eq, passports, passportVersions, skillAwards, sql, students, type Db } from "@passport/db";
+import { auditLog, createDb, eq, passports, passportVersions, skillAwards, sql, students, type Db } from "@passport/db";
 import { runMigrations } from "@passport/db/migrate";
 import type { Chain, Found } from "./chain.ts";
 import { issuePassport, type IssueDeps } from "./issue.ts";
@@ -17,8 +17,13 @@ let pool: pg.Pool;
 
 // every render differs (like chromium's real timestamps), so a re-render would change the hash
 let renders: Passport[] = [];
+// runs once while the next pdf renders, like a sync landing mid-issue
+let duringRender: (() => Promise<unknown>) | null = null;
 const render = async (p: Passport) => {
   renders.push(p);
+  const hook = duringRender;
+  duringRender = null;
+  await hook?.();
   return new TextEncoder().encode(`${JSON.stringify(p)}#${renders.length}`);
 };
 
@@ -26,8 +31,10 @@ class FakeChain implements Chain {
   records = new Map<string, Found>();
   attestCalls = 0;
   failNext: "before-write" | "after-write" | null = null;
+  duringWrite: (() => Promise<unknown>) | null = null;
   async attest({ code, pdfSha256, version }: { code: string; pdfSha256: Uint8Array; version: number }) {
     this.attestCalls++;
+    await this.duringWrite?.();
     if (this.failNext === "before-write") { this.failNext = null; throw new Error("rpc timeout"); }
     const found = { address: `att-${code}`, signature: `sig-${code}`, signer: "issuer", pdfSha256, version };
     this.records.set(code, found);
@@ -69,6 +76,7 @@ afterAll(() => pool.end());
 beforeEach(async () => {
   await db.execute(sql`truncate audit_log, sync_runs, skill_awards, passport_versions, passports, students restart identity cascade`);
   renders = [];
+  duringRender = null;
   chain = new FakeChain();
   store = memoryStore();
   deps = { render, chain, store, publicBaseUrl: "https://passport.example" };
@@ -137,5 +145,61 @@ describe("issue job", () => {
     expect(chain.records.size).toBe(2); // both versions stay verifiable on chain
     const [rec] = await db.select().from(skillAwards).where(eq(skillAwards.recordId, "REC-0029"));
     expect(rec?.appliedInVersionId).toBe(v2!.id);
+  });
+
+  // what sync does to a pending row when the sheet changes
+  const edit = (recordId: string, set: Partial<typeof skillAwards.$inferInsert>) =>
+    db.update(skillAwards).set(set).where(eq(skillAwards.recordId, recordId));
+  const reject = (recordId: string) => edit(recordId, { verification: "REJECTED", rowHash: `${recordId}-rejected`, state: "ignored" });
+  const audit = async (action: string) => (await db.select().from(auditLog).where(eq(auditLog.action, action))).map((a) => a.details);
+
+  it("starts over when a skill is edited while the pdf renders", async () => {
+    await seed(["REC-0001", "AI Literacy", "2026-09-18"]);
+    duringRender = () => edit("REC-0001", { skillName: "AI Literacy Advanced", rowHash: "REC-0001-edited" });
+    const r = await issue();
+
+    const [v, extra] = await versions();
+    expect(r.status === "issued" && r.versionNo).toBe(1); // the cancelled try never became a version
+    expect(extra).toBeUndefined();
+    expect(renders.map((p) => p.skills[0]!.name)).toEqual(["AI Literacy", "AI Literacy Advanced"]);
+    expect(chain.attestCalls).toBe(1); // only the second pdf reached the chain
+    expect(v!.skills![0]).toMatchObject({ skillName: "AI Literacy Advanced", rowHash: "REC-0001-edited" });
+    expect(await audit("version_cancelled")).toEqual([expect.objectContaining({ versionNo: 1, changedRecords: ["REC-0001"] })]);
+  });
+
+  it("issues nothing when the only new skill is rejected while the pdf renders", async () => {
+    await seed(["REC-0001", "AI Literacy", "2026-09-18"]);
+    duringRender = () => reject("REC-0001");
+    expect(await issue()).toEqual({ status: "nothing-pending" });
+    expect(await versions()).toHaveLength(0);
+    expect(chain.attestCalls).toBe(0);
+    expect((await db.select().from(skillAwards))[0]?.state).toBe("ignored");
+  });
+
+  it("keeps a new version's other skills when one of them is rejected mid-render", async () => {
+    await seed(["REC-0001", "AI Literacy", "2026-09-18"]);
+    await issue();
+    await seed(["REC-0002", "Prompt Engineering Fundamentals", "2026-09-21"], ["REC-0003", "AI Data Analysis", "2026-10-14"]);
+    duringRender = () => reject("REC-0003");
+    await issue();
+
+    const [, v2] = await versions();
+    expect(v2).toMatchObject({ versionNo: 2, state: "issued", skillCount: 2 });
+    expect(v2!.includedRecordIds.toSorted()).toEqual(["REC-0001", "REC-0002"]);
+    expect(renders.at(-1)!.skills.map((s) => s.name)).toEqual(["AI Literacy", "Prompt Engineering Fundamentals"]);
+  });
+
+  it("keeps the ledger equal to the chain when a skill is rejected during the chain write", async () => {
+    await seed(["REC-0001", "AI Literacy", "2026-09-18"]);
+    chain.duringWrite = () => reject("REC-0001");
+    await issue();
+
+    const [v] = await versions();
+    expect(v!.state).toBe("issued");
+    // put back to what was issued, so the next sync sees the sheet differ and flags it as edited after issue
+    expect((await db.select().from(skillAwards))[0]).toMatchObject({
+      state: "applied", appliedInVersionId: v!.id, verification: "CONFIRMED", rowHash: "REC-0001",
+    });
+    expect(await audit("version_issued")).toEqual([expect.objectContaining({ changedDuringIssue: ["REC-0001"] })]);
   });
 });

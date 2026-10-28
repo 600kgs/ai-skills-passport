@@ -39,7 +39,7 @@ Two optional paths add data through the same sheet, so it stays the only source:
 
 The worker reads the sheet every **15 seconds**, compares it with the ledger in one database transaction (with a lock, so two workers can never sync at once), and queues an **issue job** for every passport that has newly confirmed skills.
 
-An issue job **renders the PDF, stores it, records its fingerprint on chain, and only then marks the version issued**. Each step is saved as it happens, so a crash or a failed network call resumes the same version instead of starting a second one. Before writing to the chain the job checks whether the record is already there, so a retry can't create a duplicate. Failed jobs retry with growing delays.
+An issue job **renders the PDF, stores it, records its fingerprint on chain, and only then marks the version issued**. Each step is saved as it happens, so a crash or a failed network call resumes the same version instead of starting a second one. Before writing to the chain the job checks whether the record is already there, so a retry can't create a duplicate. The skills are frozen when a version opens and the PDF is made from that copy; if a skill is edited, rejected or deleted while the PDF renders, the unfinished version is dropped and started again, so nothing changed mid-issue reaches the chain. Failed jobs retry with growing delays.
 
 After a version is issued, a separate **notify job** emails the student (Georgian and English, with a download link). It is its own job so that an email problem can never fail or repeat an issue. Test addresses (`@example.org`) are skipped.
 

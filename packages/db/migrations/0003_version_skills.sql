@@ -1,0 +1,1 @@
+ALTER TABLE "passport_versions" ADD COLUMN "skills" jsonb;

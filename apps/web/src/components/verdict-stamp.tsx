@@ -30,7 +30,7 @@ const ICON: Record<Kind, React.ReactNode> = {
 export function VerdictStamp({ outcome, extra }: { outcome: Kind; extra?: string }) {
   const s = useDict().verify.outcomes[outcome];
   return (
-    <div role="status" aria-live="polite" className={`flex items-start gap-5 p-6 sm:p-8 ${TONE[outcome]}`}>
+    <div role="status" aria-live="polite" className={`flex items-start gap-5 p-6 sm:p-8 ${TONE[outcome]} ${outcome === "checking" ? "" : "stamp-land"}`}>
       <svg aria-hidden viewBox="0 0 48 48" className={`size-12 shrink-0 sm:size-16 ${outcome === "checking" ? "animate-spin [animation-duration:3s] motion-reduce:animate-none" : ""}`}
         fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
         {ICON[outcome]}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CountUp } from "@/components/count-up";
 import { StickerCluster } from "@/components/sticker-cluster";
 import { getDict } from "@/i18n/server";
 import { currentUser } from "@/lib/auth";
@@ -43,7 +44,7 @@ export default async function HomePage() {
               {([["passports", stats.passports], ["versions", stats.versions], ["skills", stats.skills]] as const).map(([k, n]) => (
                 <div key={k} className="flex flex-col-reverse">
                   <dt className="mt-1 font-display text-2xl text-blue">{h.stats[k]}</dt>
-                  <dd className="font-display text-7xl text-magenta">{n}</dd>
+                  <dd className="font-display text-7xl text-magenta"><CountUp to={n} /></dd>
                 </div>
               ))}
             </dl>

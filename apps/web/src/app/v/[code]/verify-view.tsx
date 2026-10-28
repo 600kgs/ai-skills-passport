@@ -9,7 +9,7 @@ import type { IssuerDocument } from "@/app/.well-known/btu-passport-issuer.json/
 import type { VerifyInfo } from "@/app/api/verify/[code]/route";
 import { VerdictStamp } from "@/components/verdict-stamp";
 import { useDict } from "@/i18n/client";
-import { formatDate } from "@/i18n/format";
+import { fill, formatDate } from "@/i18n/format";
 
 type Load<T> = { state: "loading" } | { state: "done"; value: T } | { state: "error" };
 const short = (a: string) => `${a.slice(0, 4)}...${a.slice(-4)}`;
@@ -24,7 +24,10 @@ export default function VerifyView() {
   // a malformed code can't have a record, so there's nothing to look up
   const record: Load<ChainRecord | null> = code ? lookup : { state: "done", value: null };
   const [info, setInfo] = useState<VerifyInfo | null>(null);
+  const [infoDone, setInfoDone] = useState(false);
   const [file, setFile] = useState<{ name: string; hash: Uint8Array } | null>(null);
+  // how many checks are shown as finished: they tick one at a time, never ahead of the real result
+  const [revealed, setRevealed] = useState(0);
   const [dragging, setDragging] = useState(false);
   const verdictRef = useRef<HTMLDivElement>(null);
 
@@ -46,7 +49,9 @@ export default function VerifyView() {
         setRecord({ state: "error" });
       }
     })();
-    fetch(`/api/verify/${code}`).then(async (r) => (r.ok ? setInfo(await r.json()) : null)).catch(() => null);
+    // a hung server must not hold the verdict back: after 5 s the version just counts as unconfirmed
+    fetch(`/api/verify/${code}`, { signal: AbortSignal.timeout(5000) })
+      .then(async (r) => (r.ok ? setInfo(await r.json()) : null)).catch(() => null).finally(() => setInfoDone(true));
   }, [code]);
 
   async function check(f: File | undefined) {
@@ -57,8 +62,34 @@ export default function VerifyView() {
   // the chain's version is the truth; the server only answers "is it the latest"
   const latest = info && rec && info.versionNo === rec.version ? { isLatest: info.isLatest } : null;
   const v = verdict({ record: rec, latest, fileHash: file?.hash ?? null });
-  const outcome = record.state === "done" ? v.outcome : "checking";
   const outdatedNote = info && !info.isLatest ? `${v_.newerVersion} V${info.latest.versionNo}, ${day(info.latest.issuedAt)}` : undefined;
+
+  const c = v_.checks;
+  // a malformed code is never looked up, so it has no checks to show
+  const steps: Step[] = !code ? [] : [
+    { wait: c.issuerPending, done: issuer && { status: "ok", text: fill(c.issuer, { domain: issuer.domain }) } },
+    { wait: c.recordPending, done: record.state !== "done" ? null : rec ? { status: "ok", text: c.record } : { status: "fail", text: c.noRecord } },
+  ];
+  if (rec) {
+    steps.push(
+      { wait: c.versionPending, done: !infoDone ? null
+        : v.record === "latest" ? { status: "ok", text: fill(c.latest, { n: rec.version }) }
+        : v.record === "outdated" && info ? { status: "warn", text: fill(c.outdated, { n: rec.version, m: info.latest.versionNo }) }
+        : { status: "warn", text: c.unconfirmed } },
+      { wait: c.fileIdle, done: !file ? { status: "idle", text: c.fileIdle } : v.file === "authentic" ? { status: "ok", text: c.fileOk } : { status: "fail", text: c.fileBad } },
+    );
+  }
+  const settled = steps.findIndex((s) => !s.done);
+  const ready = settled === -1 ? steps.length : settled;
+
+  useEffect(() => {
+    if (revealed >= ready) return;
+    const id = setTimeout(() => setRevealed((r) => r + 1), matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 300);
+    return () => clearTimeout(id);
+  }, [revealed, ready]);
+
+  // the stamp lands once every check above it has ticked
+  const outcome = record.state === "done" && settled === -1 && revealed >= ready ? v.outcome : "checking";
 
   return (
     <main>
@@ -69,8 +100,16 @@ export default function VerifyView() {
           <div ref={verdictRef} className="mt-8 scroll-mt-6">
             {record.state === "error"
               ? <p role="alert" className="border-l-[12px] border-magenta bg-white p-6 text-lg">{v_.chainError}</p>
-              : <VerdictStamp outcome={outcome} extra={v.outcome === "authentic-outdated" ? outdatedNote : undefined} />}
+              : <VerdictStamp key={outcome} outcome={outcome} extra={v.outcome === "authentic-outdated" ? outdatedNote : undefined} />}
           </div>
+          {record.state !== "error" && steps.length > 0 && (
+            <section aria-labelledby="checks-h" className="mt-8">
+              <h2 id="checks-h" className="font-display text-2xl text-blue">{v_.checksTitle}</h2>
+              <ol className="mt-3 space-y-2.5">
+                {steps.map((s, i) => <Check key={i} {...(i < revealed && s.done ? s.done : { status: "pending", text: s.wait })} />)}
+              </ol>
+            </section>
+          )}
         </div>
       </section>
 
@@ -142,6 +181,31 @@ export default function VerifyView() {
         </section>
       </div>
     </main>
+  );
+}
+
+type Status = "pending" | "ok" | "warn" | "fail" | "idle";
+// one check: what it says while waiting, and its result once known
+type Step = { wait: string; done: { status: Exclude<Status, "pending">; text: string } | null };
+
+const MARK: Record<Status, { tone: string; icon: React.ReactNode }> = {
+  pending: { tone: "text-muted", icon: <circle cx="12" cy="12" r="8" strokeDasharray="3 3" /> },
+  ok: { tone: "text-blue", icon: <><circle cx="12" cy="12" r="9" /><path d="m7.5 12.5 3 3 6-6.5" /></> },
+  warn: { tone: "text-ink", icon: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5.5l3.5 2" /></> },
+  fail: { tone: "text-magenta", icon: <><circle cx="12" cy="12" r="9" /><path d="m8.5 8.5 7 7m0-7-7 7" /></> },
+  idle: { tone: "text-muted", icon: <circle cx="12" cy="12" r="9" /> },
+};
+
+function Check({ status, text }: { status: Status; text: string }) {
+  const m = MARK[status];
+  return (
+    <li className={`flex items-start gap-3 text-lg ${status === "pending" || status === "idle" ? "text-muted" : "text-ink"}`}>
+      <svg key={status} aria-hidden viewBox="0 0 24 24" className={`mt-0.5 size-6 shrink-0 ${m.tone} ${status === "pending" ? "animate-spin [animation-duration:3s] motion-reduce:animate-none" : "check-tick"}`}
+        fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+        {m.icon}
+      </svg>
+      <span>{text}</span>
+    </li>
   );
 }
 

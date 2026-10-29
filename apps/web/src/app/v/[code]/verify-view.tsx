@@ -98,7 +98,8 @@ export default function VerifyView() {
 
   return (
     <main>
-      <section className="bg-panel">
+      {/* clip: the verdict lands from 115% size, which would otherwise widen the page on a phone */}
+      <section className="overflow-x-clip bg-panel">
         <div className="mx-auto max-w-6xl px-4 pt-20 pb-12 sm:pt-24">
           <p className="font-display text-2xl text-blue">{v_.codeLabel}</p>
           <p className="font-display text-5xl tracking-wider text-ink sm:text-6xl">{code ?? v_.invalidCode}</p>

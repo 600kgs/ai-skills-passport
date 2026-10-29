@@ -118,6 +118,28 @@ export default function VerifyView() {
         </div>
       </section>
 
+      {rec && info && !revoked && info.skills.length > 0 && (
+        <section aria-labelledby="stamps-h" className="mx-auto max-w-6xl px-4 pt-14">
+          <h2 id="stamps-h" className="border-b-4 border-blue pb-2 font-display text-4xl text-ink">{v_.skills} ({info.skills.length})</h2>
+          {/* on a phone the stamps swipe sideways, with the next one peeking in, so the record below isn't pushed far down */}
+          <ul tabIndex={0} aria-labelledby="stamps-h"
+            className="-mx-4 mt-6 flex snap-x snap-mandatory scroll-px-4 gap-6 overflow-x-auto px-4 pb-4 focus-visible:outline-3 focus-visible:outline-magenta sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-y-10 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4">
+            {info.skills.map((s, i) => (
+              <li key={`${s.name}-${i}`} className="w-[42%] shrink-0 snap-start sm:w-auto">
+                <div className="flex h-28 items-center justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- small static pngs, nothing for the image optimizer to do */}
+                  <img src={STAMP[s.category] ?? STAMP["AI Skill"]} alt={s.category} className={`max-h-full object-contain ${s.category === "AI Applied Skill" ? "max-w-[72%]" : "max-w-[85%]"}`}
+                    style={{ transform: `rotate(${TILT[i % TILT.length]}deg)` }} />
+                </div>
+                <p className="mt-4 font-semibold leading-snug text-ink">{s.name}</p>
+                {s.earnedThrough && <p className="mt-1 text-sm text-muted">{v_.earnedThrough} {s.earnedThrough}</p>}
+                <p className="mt-0.5 text-sm text-muted">{day(s.dateEarned)}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <div className="mx-auto grid max-w-6xl gap-12 px-4 py-14 md:grid-cols-2">
         <section aria-labelledby="record-h">
           <h2 id="record-h" className="border-b-4 border-blue pb-2 font-display text-4xl text-ink">{v_.recordTitle}</h2>
@@ -137,13 +159,6 @@ export default function VerifyView() {
                 {v.record === "outdated" && info && <span className="ml-1 bg-yellow px-2 py-0.5 font-display text-lg text-ink">{v_.latestIs} V{info.latest.versionNo}</span>}
               </Row>
               {info && <Row label={v_.issuedOn}>{day(info.issuedAt)}</Row>}
-              {info && info.skills.length > 0 && (
-                <Row label={`${v_.skills} (${info.skills.length})`}>
-                  <ul className="space-y-1.5">
-                    {info.skills.map((s) => <li key={s.name}><span className="font-semibold text-ink">{s.name}</span> <span className="text-sm text-muted">{s.category}</span></li>)}
-                  </ul>
-                </Row>
-              )}
               <Row label={v_.issuer}>
                 <p className="font-semibold text-ink">{issuer?.issuer ?? t.site.university}</p>
                 <p className="mt-1">{v_.publishedBy} <b className="text-ink">{issuer?.domain ?? "..."}</b></p>
@@ -188,6 +203,12 @@ export default function VerifyView() {
     </main>
   );
 }
+
+// btu's own category stamps, the same art as on the pdf, set at a slight angle like ink stamps
+const STAMP: Record<string, string> = {
+  "AI Skill": "/art/stamp-skill.png", "AI Applied Skill": "/art/stamp-applied.png", "AI Advanced Skill": "/art/stamp-advanced.png",
+};
+const TILT = [-4, 3, -2, 5, -5, 2];
 
 type Status = "pending" | "ok" | "warn" | "fail" | "idle";
 // one check: what it says while waiting, and its result once known

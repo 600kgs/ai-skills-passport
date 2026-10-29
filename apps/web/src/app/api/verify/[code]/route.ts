@@ -10,7 +10,7 @@ export type VerifyInfo = {
   holder: string;
   versionNo: number;
   issuedAt: string;
-  skills: { name: string; category: string }[];
+  skills: { name: string; category: string; earnedThrough: string | null; dateEarned: string }[];
   isLatest: boolean;
   latest: { versionNo: number; issuedAt: string };
   revoked: { at: string; reason: string } | null;
@@ -33,17 +33,19 @@ export async function GET(req: Request, ctx: RouteContext<"/api/verify/[code]">)
   const [latest] = passport.latestVersionId
     ? await db.select().from(passportVersions).where(eq(passportVersions.id, passport.latestVersionId))
     : [];
-  const skills = version.includedRecordIds.length
-    ? await db.select({ name: skillAwards.skillName, category: skillAwards.category, date: skillAwards.dateEarned })
-      .from(skillAwards).where(inArray(skillAwards.recordId, version.includedRecordIds))
-    : [];
+  // what the pdf printed: the version's frozen snapshot, or the live rows for versions issued before it existed
+  const skills = version.skills?.map((s) => ({ name: s.skillName, category: s.category, earnedThrough: s.earnedThrough, dateEarned: s.dateEarned }))
+    ?? (version.includedRecordIds.length
+      ? await db.select({ name: skillAwards.skillName, category: skillAwards.category, earnedThrough: skillAwards.earnedThrough, dateEarned: skillAwards.dateEarned })
+        .from(skillAwards).where(inArray(skillAwards.recordId, version.includedRecordIds))
+      : []);
 
   const info: VerifyInfo = {
     passportId: passport.passportId,
     holder: `${student.firstName} ${student.lastName}`,
     versionNo: version.versionNo,
     issuedAt: version.issuedAt!.toISOString(),
-    skills: skills.sort((a, b) => a.date.localeCompare(b.date)).map(({ name, category }) => ({ name, category })),
+    skills: skills.sort((a, b) => a.dateEarned.localeCompare(b.dateEarned)),
     isLatest: latest?.id === version.id,
     latest: { versionNo: latest?.versionNo ?? version.versionNo, issuedAt: (latest?.issuedAt ?? version.issuedAt!).toISOString() },
     revoked: version.revokedAt ? { at: version.revokedAt.toISOString(), reason: version.revokeReason ?? "" } : null,

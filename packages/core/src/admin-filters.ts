@@ -47,7 +47,7 @@ export function passportFilters(p: Params): PassportFilters {
 // which audit actions each activity filter shows
 export const ACTIVITY_TYPES = {
   admin: ["record_confirmed", "record_rejected", "sync_requested", "rows_imported", "ledger_reset"],
-  issued: ["passport_created", "version_issued"],
+  issued: ["passport_created", "version_issued", "version_revoked"],
   sheet: ["award_recorded", "award_updated", "award_removed"],
   email: ["student_notified"],
 } as const;

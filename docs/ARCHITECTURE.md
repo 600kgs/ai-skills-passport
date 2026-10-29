@@ -116,4 +116,4 @@ Built for the test, still to do for production:
 - **Mainnet and a BTU domain** (for example `passport.btu.edu.ge`), with BTU's own authority key; passports are issued under it.
 - **Backups:** hourly database dumps and PDF copies to Azure Blob with soft delete, plus a tested restore.
 - **Monitoring:** an uptime check, and alerts for failed issues, a low signing-key balance, and an hourly chain audit.
-- **Revocation:** a confirmed skill that later turns out to be wrong. Today the sheet flags the edit; production needs a flow that issues a corrected version.
+- **Revocation:** a confirmed skill that later turns out to be wrong. Today `revoke` withdraws the issued version: its chain record is closed and the verify page shows it as revoked, with the reason. Production also needs a flow that issues a corrected version without that skill.

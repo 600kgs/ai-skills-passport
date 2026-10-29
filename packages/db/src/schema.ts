@@ -71,6 +71,9 @@ export const passportVersions = pgTable("passport_versions", {
   signer: text("signer"),
   error: text("error"),
   issuedAt: timestamp("issued_at", { withTimezone: true }),
+  // set by scripts/revoke.ts: the version stays in the ledger, its chain record is closed
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  revokeReason: text("revoke_reason"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   uniqueIndex("passport_versions_no_idx").on(t.passportId, t.versionNo),

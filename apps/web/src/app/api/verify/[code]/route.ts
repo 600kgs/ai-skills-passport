@@ -1,4 +1,4 @@
-// what the server adds to the chain check: whether this version is the latest,
+// what the server adds to the chain check: whether this version is the latest or was revoked,
 // and the fields already printed on the pdf. nothing beyond that is exposed.
 import { normalizeCode } from "@passport/core";
 import { and, eq, inArray, passports, passportVersions, skillAwards, students } from "@passport/db";
@@ -13,6 +13,7 @@ export type VerifyInfo = {
   skills: { name: string; category: string }[];
   isLatest: boolean;
   latest: { versionNo: number; issuedAt: string };
+  revoked: { at: string; reason: string } | null;
 };
 
 export async function GET(req: Request, ctx: RouteContext<"/api/verify/[code]">) {
@@ -45,6 +46,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/verify/[code]">)
     skills: skills.sort((a, b) => a.date.localeCompare(b.date)).map(({ name, category }) => ({ name, category })),
     isLatest: latest?.id === version.id,
     latest: { versionNo: latest?.versionNo ?? version.versionNo, issuedAt: (latest?.issuedAt ?? version.issuedAt!).toISOString() },
+    revoked: version.revokedAt ? { at: version.revokedAt.toISOString(), reason: version.revokeReason ?? "" } : null,
   };
   return Response.json(info, { headers: { "Cache-Control": "no-store" } });
 }

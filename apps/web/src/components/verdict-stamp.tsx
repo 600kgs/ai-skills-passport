@@ -1,7 +1,7 @@
 "use client";
 
 // the result: the one loud element on the page. btu's tile colours with a fixed meaning,
-// blue = genuine, yellow = genuine but replaced, black = no match; the words always say it too
+// blue = genuine, yellow = genuine but replaced, black = no match or withdrawn; the words always say it too
 import type { Outcome } from "@passport/core";
 import { useDict } from "@/i18n/client";
 
@@ -15,6 +15,7 @@ const TONE: Record<Kind, string> = {
   "authentic-outdated": "bg-yellow text-ink",
   "authentic-unconfirmed": "bg-blue text-white",
   modified: "border-l-[12px] border-magenta bg-ink text-white",
+  revoked: "border-l-[12px] border-magenta bg-ink text-white",
 };
 
 const ICON: Record<Kind, React.ReactNode> = {
@@ -25,6 +26,7 @@ const ICON: Record<Kind, React.ReactNode> = {
   "authentic-outdated": <><circle cx="24" cy="24" r="19" /><path d="M24 13v12l7 4" /></>,
   "authentic-unconfirmed": <><circle cx="24" cy="24" r="19" /><path d="m15 24.5 6.5 6.5L34 17.5" /></>,
   modified: <><path d="M24 5 44 41H4z" /><path d="M24 18v11M24 34v1" /></>,
+  revoked: <><circle cx="24" cy="24" r="19" /><path d="m11 11 26 26" /></>,
 };
 
 export function VerdictStamp({ outcome, extra }: { outcome: Kind; extra?: string }) {

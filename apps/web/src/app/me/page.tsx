@@ -46,7 +46,7 @@ export default async function MePage() {
                 <li key={v.code} className={`mt-4 grid gap-5 p-6 sm:grid-cols-[auto_1fr_auto] sm:items-center ${v.isLatest ? "bg-blue text-white" : "bg-panel"}`}>
                   <p className="font-display text-6xl leading-none">V{v.versionNo}</p>
                   <div>
-                    <p className="font-display text-2xl">{v.isLatest ? m.latest : m.replaced}</p>
+                    <p className="font-display text-2xl">{v.isLatest ? m.latest : v.revoked ? m.revoked : m.replaced}</p>
                     <p className={v.isLatest ? "text-white/85" : "text-muted"}>
                       {m.issued} {formatDate(t.locale, v.issuedAt)}, {v.skillCount} {v.skillCount === 1 ? m.skillOne : m.skillMany}, {m.code}{" "}
                       <span className={`font-bold tracking-wider ${v.isLatest ? "text-white" : "text-ink"}`}>{v.code}</span>

@@ -8,7 +8,7 @@ import { getDb } from "@/lib/db";
 export type MyPassport = {
   passportId: string;
   holder: string;
-  versions: { versionNo: number; code: string; issuedAt: Date; skillCount: number; isLatest: boolean }[];
+  versions: { versionNo: number; code: string; issuedAt: Date; skillCount: number; isLatest: boolean; revoked: boolean }[];
 };
 
 // the passport whose sheet email is this account's email, with its issued versions newest first
@@ -29,7 +29,7 @@ export async function passportForEmail(email: string): Promise<MyPassport | null
       .sort((a, b) => b.versionNo - a.versionNo)
       .map((v) => ({
         versionNo: v.versionNo, code: v.verificationCode, issuedAt: v.issuedAt!, skillCount: v.skillCount,
-        isLatest: v.id === row.passport.latestVersionId,
+        isLatest: v.id === row.passport.latestVersionId, revoked: !!v.revokedAt,
       })),
   };
 }

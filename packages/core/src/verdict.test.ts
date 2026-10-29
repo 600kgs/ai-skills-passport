@@ -33,3 +33,14 @@ describe("verdict", () => {
     expect(v).toEqual({ record: "unconfirmed", file: "authentic", outcome: "authentic-unconfirmed" });
   });
 });
+
+describe("verdict for a revoked version", () => {
+  it("is revoked once the chain record is closed, whatever file is added", async () => {
+    expect(verdict({ record: null, latest: null, fileHash: await sha256(pdf), revoked: true })).toEqual({ record: "revoked", file: "not-checked", outcome: "revoked" });
+  });
+
+  it("is revoked even while the record is still open and the file matches", async () => {
+    const v = verdict({ record: await record(), latest: { isLatest: true }, fileHash: await sha256(pdf), revoked: true });
+    expect(v).toEqual({ record: "revoked", file: "authentic", outcome: "revoked" });
+  });
+});

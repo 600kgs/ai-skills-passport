@@ -12,7 +12,8 @@
     "verify": "tsx scripts/verify.ts",
     "rotate-issuer": "tsx scripts/rotate-issuer.ts",
     "audit-chain": "tsx scripts/audit-chain.ts",
-    "reissue": "tsx scripts/reissue.ts"
+    "reissue": "tsx scripts/reissue.ts",
+    "revoke": "tsx scripts/revoke.ts"
   },
   "dependencies": {
     "@fontsource/noto-sans-georgian": "^5.3.0",

@@ -1,7 +1,7 @@
 "use client";
 
 // verification runs in the visitor's browser: the record comes straight from solana,
-// the pdf is hashed locally and never uploaded. our server only says "latest or not".
+// the pdf is hashed locally and never uploaded. our server only says "latest or not", and "revoked".
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { findRecord, normalizeCode, sha256, verdict, type ChainRecord } from "@passport/core";
@@ -61,16 +61,21 @@ export default function VerifyView() {
   const rec = record.state === "done" ? record.value : null;
   // the chain's version is the truth; the server only answers "is it the latest"
   const latest = info && rec && info.versionNo === rec.version ? { isLatest: info.isLatest } : null;
-  const v = verdict({ record: rec, latest, fileHash: file?.hash ?? null });
+  const revoked = info?.revoked ?? null;
+  const v = verdict({ record: rec, latest, fileHash: file?.hash ?? null, revoked: !!revoked });
   const outdatedNote = info && !info.isLatest ? `${v_.newerVersion} V${info.latest.versionNo}, ${day(info.latest.issuedAt)}` : undefined;
+  const revokedNote = revoked ? fill(v_.revokedOn, { date: day(revoked.at), reason: revoked.reason }) : undefined;
 
   const c = v_.checks;
   // a malformed code is never looked up, so it has no checks to show
   const steps: Step[] = !code ? [] : [
     { wait: c.issuerPending, done: issuer && { status: "ok", text: fill(c.issuer, { domain: issuer.domain }) } },
-    { wait: c.recordPending, done: record.state !== "done" ? null : rec ? { status: "ok", text: c.record } : { status: "fail", text: c.noRecord } },
+    // a revoked version's record is closed, so "no record" waits for our server to say why
+    { wait: c.recordPending, done: record.state !== "done" || (!rec && !infoDone) ? null
+      : revoked ? { status: "fail", text: fill(c.revoked, { date: day(revoked.at) }) }
+      : rec ? { status: "ok", text: c.record } : { status: "fail", text: c.noRecord } },
   ];
-  if (rec) {
+  if (rec && !revoked) {
     steps.push(
       { wait: c.versionPending, done: !infoDone ? null
         : v.record === "latest" ? { status: "ok", text: fill(c.latest, { n: rec.version }) }
@@ -100,7 +105,7 @@ export default function VerifyView() {
           <div ref={verdictRef} className="mt-8 scroll-mt-6">
             {record.state === "error"
               ? <p role="alert" className="border-l-[12px] border-magenta bg-white p-6 text-lg">{v_.chainError}</p>
-              : <VerdictStamp key={outcome} outcome={outcome} extra={v.outcome === "authentic-outdated" ? outdatedNote : undefined} />}
+              : <VerdictStamp key={outcome} outcome={outcome} extra={v.outcome === "authentic-outdated" ? outdatedNote : v.outcome === "revoked" ? revokedNote : undefined} />}
           </div>
           {record.state !== "error" && steps.length > 0 && (
             <section aria-labelledby="checks-h" className="mt-8">
@@ -117,7 +122,7 @@ export default function VerifyView() {
         <section aria-labelledby="record-h">
           <h2 id="record-h" className="border-b-4 border-blue pb-2 font-display text-4xl text-ink">{v_.recordTitle}</h2>
           {record.state === "loading" && <p className="mt-5 text-muted">{v_.reading}</p>}
-          {record.state === "done" && !rec && <p className="mt-5 text-lg">{v_.noRecord}</p>}
+          {record.state === "done" && !rec && infoDone && <p className="mt-5 text-lg">{revoked ? v_.revokedRecord : v_.noRecord}</p>}
           {rec && (
             <dl className="mt-5 divide-y divide-line">
               {info && (
@@ -166,11 +171,11 @@ export default function VerifyView() {
             onDrop={(e) => { e.preventDefault(); setDragging(false); check(e.dataTransfer.files[0]); }}
             className={`mt-5 flex cursor-pointer flex-col items-center justify-center border-2 border-dashed px-6 py-14 text-center focus-within:border-magenta focus-within:outline-3 focus-within:outline-magenta ${dragging ? "border-magenta bg-magenta/5" : "border-[#bdbdbd] bg-panel"} ${rec ? "" : "cursor-not-allowed opacity-60"}`}
           >
-            <input type="file" accept="application/pdf" className="sr-only" disabled={!rec} aria-label={rec ? v_.drop : v_.waitForRecord} onChange={(e) => check(e.target.files?.[0])} />
+            <input type="file" accept="application/pdf" className="sr-only" disabled={!rec} aria-label={rec ? v_.drop : revoked ? v_.revokedNoFile : v_.waitForRecord} onChange={(e) => check(e.target.files?.[0])} />
             <svg aria-hidden viewBox="0 0 48 48" className="size-12 text-magenta" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 6h14l8 8v28H14z" /><path d="M28 6v8h8M25 36V22m-6 6 6-6 6 6" />
             </svg>
-            <span className="mt-4 font-display text-2xl text-ink">{rec ? v_.drop : v_.waitForRecord}</span>
+            <span className="mt-4 font-display text-2xl text-ink">{rec ? v_.drop : revoked ? v_.revokedNoFile : v_.waitForRecord}</span>
             <span className="mt-2 max-w-sm text-sm text-muted">{v_.staysLocal}</span>
           </label>
           {file && (

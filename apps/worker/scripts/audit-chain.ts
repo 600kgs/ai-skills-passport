@@ -28,6 +28,7 @@ const rpcUrl = env("SOLANA_RPC_URL");
 const { db, pool } = createDb(env("DATABASE_URL"));
 const versions = await db.select({
   code: passportVersions.verificationCode, passportId: passportVersions.passportId, versionNo: passportVersions.versionNo, state: passportVersions.state,
+  revokedAt: passportVersions.revokedAt,
 }).from(passportVersions);
 await pool.end();
 
@@ -36,7 +37,9 @@ const known = new Map(await Promise.all(versions.map(async (v) => [await attesta
 const onChain = await listAttestations(rpcUrl, authority);
 const chainAddresses = new Set(onChain.map((a) => a.address));
 const unknown = onChain.filter((a) => !known.has(a.address));
-const missing = [...known].filter(([addr, v]) => v.state === "issued" && !chainAddresses.has(addr));
+// a revoked version's record is closed on purpose, so it is only off when it is still open
+const missing = [...known].filter(([addr, v]) => v.state === "issued" && !v.revokedAt && !chainAddresses.has(addr));
+const revokedOpen = onChain.filter((a) => known.get(a.address)?.revokedAt);
 // a record we hold the pdf for is ours even if the ledger lost it (say, restored from an older backup).
 // those are never closed: closing one would turn a real passport into "unknown code" for good
 const pdfDir = join(env("STORAGE_DIR"), "pdfs");
@@ -49,7 +52,7 @@ const bySigner = (list: typeof onChain) => {
   for (const a of list) n.set(a.signer, (n.get(a.signer) ?? 0) + 1);
   return [...n].map(([s, c]) => `${s} (${c})`).join(", ");
 };
-console.log(`ledger:   ${versions.length} versions, ${versions.filter((v) => v.state === "issued").length} issued`);
+console.log(`ledger:   ${versions.length} versions, ${versions.filter((v) => v.state === "issued").length} issued, ${versions.filter((v) => v.revokedAt).length} of them revoked`);
 console.log(`on chain: ${onChain.length} attestations, signed by ${bySigner(onChain) || "nobody"}`);
 console.log(`authorized now: ${(await authorizedSigners(rpcUrl, authority)).join(", ")}`);
 const list = (items: typeof onChain) => {
@@ -62,21 +65,24 @@ console.log(`not in the ledger, but we hold its pdf (ours; restore the ledger, n
 list(ours);
 console.log(`issued but missing on chain: ${missing.length}`);
 for (const [addr, v] of missing) console.log(`  ${v.passportId} V${v.versionNo} (${v.code}) should be at ${addr}`);
+console.log(`revoked but still open on chain (closed by --close, or rerun revoke.ts): ${revokedOpen.length}`);
+list(revokedOpen);
 
+const toClose = [...foreign, ...revokedOpen];
 let closed = 0;
-if (process.argv.includes("--close") && foreign.length) {
+if (process.argv.includes("--close") && toClose.length) {
   // an empty ledger would make every real record look unknown
   if (!versions.some((v) => v.state === "issued")) throw new Error("refusing: the ledger has no issued versions");
   const issuer = await loadSigner(env("ISSUER_KEY_FILE"));
   const { credential } = await credentialAddresses(address(authority));
   const { send } = txTools(rpcUrl);
-  console.log(`\nclosing ${foreign.length} with ${issuer.address}; their rent goes back to it`);
-  for (let i = 0; i < foreign.length; i += CLOSE_PER_TX) {
-    const batch = foreign.slice(i, i + CLOSE_PER_TX);
+  console.log(`\nclosing ${toClose.length} with ${issuer.address}; their rent goes back to it`);
+  for (let i = 0; i < toClose.length; i += CLOSE_PER_TX) {
+    const batch = toClose.slice(i, i + CLOSE_PER_TX);
     const sig = await send(batch.map((a) => getCloseAttestationInstruction({ payer: issuer, authority: issuer, credential, attestation: address(a.address) })), issuer);
     closed += batch.length;
-    console.log(`  closed ${closed}/${foreign.length}  ${sig}`);
+    console.log(`  closed ${closed}/${toClose.length}  ${sig}`);
   }
 }
 // non-zero while something is still off, so it can gate a deploy or a cron alert
-process.exit(foreign.length - closed || ours.length || missing.length ? 1 : 0);
+process.exit(toClose.length - closed || ours.length || missing.length ? 1 : 0);

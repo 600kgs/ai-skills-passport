@@ -69,14 +69,15 @@ export default async function AdminPassportPage({ params }: PageProps<"/admin/pa
                   <td className="py-3 pr-4 whitespace-nowrap">
                     {v.state === "issued" ? <Link href={`/v/${v.verificationCode}`} className={`font-semibold tracking-wider text-ink ${link}`}>{v.verificationCode}</Link> : <span className="tracking-wider text-muted">{v.verificationCode}</span>}
                   </td>
-                  <td className={`py-3 pr-4 ${v.state === "failed" ? "font-semibold text-magenta" : "text-ink"}`}>
-                    {t.states[v.state]}
+                  <td className={`py-3 pr-4 ${v.state === "failed" || v.revokedAt ? "font-semibold text-magenta" : "text-ink"}`}>
+                    {v.revokedAt ? t.revoked : t.states[v.state]}
+                    {v.revokedAt && <span className="block text-sm font-normal text-muted">{formatDateTime(d.locale, v.revokedAt)}: {v.revokeReason}</span>}
                     {v.error && <span className="block text-sm text-muted">{v.error}</span>}
                   </td>
                   <td className="py-3 pr-4 whitespace-nowrap">{v.issuedAt && formatDateTime(d.locale, v.issuedAt)}</td>
                   <td className="py-3 pr-4">{v.skillCount}</td>
                   <td className="py-3 pr-4 whitespace-nowrap">
-                    {v.attestationAddress && v.state === "issued" && <a href={`https://explorer.solana.com/address/${v.attestationAddress}${cluster}`} target="_blank" rel="noreferrer" className={`text-ink ${link}`}>{t.onChain}</a>}
+                    {v.attestationAddress && v.state === "issued" && !v.revokedAt && <a href={`https://explorer.solana.com/address/${v.attestationAddress}${cluster}`} target="_blank" rel="noreferrer" className={`text-ink ${link}`}>{t.onChain}</a>}
                   </td>
                   <td className="py-3 whitespace-nowrap">
                     {v.state === "issued" && <a href={`/api/pdf/${v.verificationCode}`} className="bg-magenta px-3 pt-1.5 pb-1 font-display text-lg text-white hover:bg-magenta-deep">PDF</a>}

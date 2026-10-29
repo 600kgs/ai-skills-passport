@@ -123,7 +123,7 @@ export default function VerifyView() {
           <h2 id="stamps-h" className="border-b-4 border-blue pb-2 font-display text-4xl text-ink">{v_.skills} ({info.skills.length})</h2>
           {/* on a phone the stamps swipe sideways, with the next one peeking in, so the record below isn't pushed far down */}
           <ul tabIndex={0} aria-labelledby="stamps-h"
-            className="-mx-4 mt-6 flex snap-x snap-mandatory scroll-px-4 gap-6 overflow-x-auto px-4 pb-4 focus-visible:outline-3 focus-visible:outline-magenta sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-y-10 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4">
+            className="mt-6 flex snap-x snap-mandatory gap-6 overflow-x-auto pb-4 focus-visible:outline-3 focus-visible:outline-magenta sm:grid sm:grid-cols-3 sm:gap-y-10 sm:overflow-visible sm:pb-0 lg:grid-cols-4">
             {info.skills.map((s, i) => (
               <li key={`${s.name}-${i}`} className="w-[42%] shrink-0 snap-start sm:w-auto">
                 <div className="flex h-28 items-center justify-center">

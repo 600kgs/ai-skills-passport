@@ -92,10 +92,12 @@ Measured on 24 October 2026, live issue figures updated 26 October. Sync and PDF
 | Render 8 passports at once | 1.7 s in total |
 | Confirm click to issued version / to chain only, live | about 3 s / 1.6 to 2.5 s (43 versions, 0 failed) |
 | One version on chain | 0.00172212 SOL deposit (back only by closing the record, which ends its verification) + 0.000005 SOL fee |
+| Load test (30 October, local production image, web capped to 2 CPU / 4 GB) | verify API about 700 req/s, verify page about 175 req/s; 0 errors at 1,000 concurrent (page p95 1.3 s at 200, 20 s at 1,000) |
 
 **What 5,000 versions a year means:**
 - **Load:** about 14 versions a day on average. The 15-second sync takes well under a second even at 5,000 rows, and reading the sheet uses 4 requests a minute, far below Google's per-minute limit.
 - **Bursts:** issue jobs run one at a time today, so about 1,200 versions an hour; a burst of 5,000 at once (a whole cohort) finishes in about 4 to 5 hours, unattended, and the queue survives restarts. Jobs are per passport and never conflict, so running 4 in parallel cuts that to roughly an hour; Gotenberg already renders in parallel.
+- **Verify traffic:** 5,000 employers within one minute is about 83 requests a second, half of what the page handled in the load test. The page is rendered per request and is the first limit; the browser's chain read goes to a public RPC, not to us. The test ran locally, not on the Azure VM, whose cores are slower.
 - **Storage:** about 1.3 GB of PDFs a year.
 - **Chain cost:** about 8.6 SOL a year locked in deposits plus 0.025 SOL in fees. Old versions must stay on chain to keep verifying, so the locked amount grows with every version.
 

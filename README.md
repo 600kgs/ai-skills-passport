@@ -8,7 +8,7 @@ BTU confirms a student's AI skill in its Google Sheet. Seconds later the student
 
 Built by team **Git Happens** (Oto Sepashvili, Nika Loliashvili) for the BTU AI Skills Digital Passport hackathon, October 2026.
 
-**Try it:** the live test deployment runs at **https://passport.btumarket.ge** (Solana devnet, test issuer). A real issued record: [/v/R24Z-0RS5-R8](https://passport.btumarket.ge/v/R24Z-0RS5-R8), and the same record on [Solana Explorer](https://explorer.solana.com/address/7ZtJ8CD3pacXJEDgLvwK4qhkwnWAMYjjkSvHigm6sUHB?cluster=devnet).
+**Try it:** the live test deployment runs at **https://passport.btumarket.ge** (Solana devnet, test issuer). A real issued record: [/v/R24Z-0RS5-R8](https://passport.btumarket.ge/v/R24Z-0RS5-R8), and the same record on [Solana Explorer](https://explorer.solana.com/address/7ZtJ8CD3pacXJEDgLvwK4qhkwnWAMYjjkSvHigm6sUHB?cluster=devnet). A revoked version: [/v/W3HQ-A1PN-WA](https://passport.btumarket.ge/v/W3HQ-A1PN-WA).
 
 | Passport cover | Skills page |
 | --- | --- |
@@ -70,6 +70,7 @@ From the optional extras: a QR code on every PDF page, an admin panel (status, c
 | Sync a 5,000-row sheet, nothing new | 0.39 s |
 | First import of 5,000 new records | 4.6 s, once |
 | One version on chain | 0.00172212 SOL deposit + 0.000005 SOL fee |
+| Load test, web capped to the server's 2 CPU / 4 GB (local) | verify API about 700 req/s, verify page about 175 req/s, 0 errors at 1,000 concurrent |
 
 5,000 versions a year is about 14 a day; one worker issues about 1,200 an hour. Full numbers and the scaling plan are in [the architecture doc](docs/ARCHITECTURE.md#7-scalability-5000-issues-and-updates-a-year).
 

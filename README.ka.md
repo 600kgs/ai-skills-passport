@@ -8,7 +8,7 @@ BTU სტუდენტის AI უნარს თავის Google ცხ
 
 აწყობილია გუნდ **Git Happens**-ის მიერ (ოთო სეფაშვილი, ნიკა ლოლიაშვილი) BTU-ს AI უნარების ციფრული პასპორტის ჰაკათონისთვის, 2026 წლის ოქტომბერი.
 
-**სცადეთ:** სატესტო ვერსია მუშაობს მისამართზე **https://passport.btumarket.ge** (Solana devnet, სატესტო გამცემი). რეალურად გაცემული ჩანაწერი: [/v/R24Z-0RS5-R8](https://passport.btumarket.ge/v/R24Z-0RS5-R8), და იგივე ჩანაწერი [Solana Explorer-ში](https://explorer.solana.com/address/7ZtJ8CD3pacXJEDgLvwK4qhkwnWAMYjjkSvHigm6sUHB?cluster=devnet).
+**სცადეთ:** სატესტო ვერსია მუშაობს მისამართზე **https://passport.btumarket.ge** (Solana devnet, სატესტო გამცემი). რეალურად გაცემული ჩანაწერი: [/v/R24Z-0RS5-R8](https://passport.btumarket.ge/v/R24Z-0RS5-R8), და იგივე ჩანაწერი [Solana Explorer-ში](https://explorer.solana.com/address/7ZtJ8CD3pacXJEDgLvwK4qhkwnWAMYjjkSvHigm6sUHB?cluster=devnet). გაუქმებული ვერსია: [/v/W3HQ-A1PN-WA](https://passport.btumarket.ge/v/W3HQ-A1PN-WA).
 
 | პასპორტის ყდა | უნარების გვერდი |
 | --- | --- |
@@ -70,6 +70,7 @@ Google ცხრილი → **worker** (სინქრონიზაცი�
 | 5,000-რიგიანი ცხრილის სინქრონიზაცია, ახლის გარეშე | 0.39 წმ |
 | 5,000 ახალი ჩანაწერის პირველი შემოტანა | 4.6 წმ, ერთხელ |
 | ერთი ვერსია ბლოკჩეინზე | 0.00172212 SOL დეპოზიტი + 0.000005 SOL საკომისიო |
+| დატვირთვის ტესტი, ვები სერვერის 2 CPU / 4 GB-ზე შეზღუდული (ლოკალურად) | შემოწმების API წამში დაახლოებით 700 მოთხოვნა, შემოწმების გვერდი წამში დაახლოებით 175, 1,000 ერთდროულზე 0 შეცდომა |
 
 წელიწადში 5,000 ვერსია დღეში დაახლოებით 14-ია; ერთი worker საათში დაახლოებით 1,200 ვერსიას გასცემს. სრული ციფრები და მასშტაბირების გეგმა [არქიტექტურის დოკუმენტშია](docs/ARCHITECTURE.ka.md).
 

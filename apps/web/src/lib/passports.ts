@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
 import { sameEmail, sha256, toHex } from "@passport/core";
 import { and, eq, passports, passportVersions, sql, students } from "@passport/db";
+import { inArray, skillAwards } from "@passport/db";
 import { getDb } from "@/lib/db";
 
 export type MyPassport = {
@@ -54,4 +55,33 @@ export async function pdfFor(code: string, user: { email: string; isAdmin: boole
   const bytes = new Uint8Array(await readFile(join(storageDir(), "pdfs", `${row.version.pdfSha256}.pdf`)));
   if (toHex(await sha256(bytes)) !== row.version.pdfSha256) throw new Error(`stored pdf for ${code} doesn't match its hash`);
   return { bytes, name: `${row.version.passportId}-V${row.version.versionNo}.pdf` };
+}
+
+export type MySkill = { recordId: string; skillId: string; skillName: string; dateEarned: string };
+
+// the skills on one of this passport's versions, one per catalog skill id, in the pdf's order.
+// names and dates come from the version's snapshot (what the pdf printed); the snapshot has no
+// skill id, so that comes from the award row, which sync never rewrites once applied (only an
+// edit made while the version was being anchored could differ)
+export async function skillsForVersion(passportId: string, code: string): Promise<MySkill[]> {
+  const db = getDb();
+  const [version] = await db.select().from(passportVersions)
+    .where(and(eq(passportVersions.passportId, passportId), eq(passportVersions.verificationCode, code), eq(passportVersions.state, "issued")));
+  if (!version || !version.includedRecordIds.length) return [];
+
+  const awards = await db.select({ recordId: skillAwards.recordId, skillId: skillAwards.skillId, skillName: skillAwards.skillName, dateEarned: skillAwards.dateEarned })
+    .from(skillAwards).where(inArray(skillAwards.recordId, version.includedRecordIds));
+  const skillIdOf = new Map(awards.map((a) => [a.recordId, a.skillId]));
+  const rows = (version.skills ?? awards)
+    .map((s) => ({ recordId: s.recordId, skillId: skillIdOf.get(s.recordId), skillName: s.skillName, dateEarned: s.dateEarned }))
+    .filter((s): s is MySkill => !!s.skillId)
+    .sort((a, b) => a.dateEarned.localeCompare(b.dateEarned) || a.recordId.localeCompare(b.recordId));
+
+  // the sheet allows the same skill twice for one student; linkedin gets it once, earliest date first
+  const seen = new Set<string>();
+  return rows.filter((s) => {
+    if (seen.has(s.skillId)) return false;
+    seen.add(s.skillId);
+    return true;
+  });
 }

@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { linkedInAddUrl, verifyUrl } from "@passport/core";
+import { linkedInSkillLinks } from "@passport/core";
 import { SignOutButton } from "@/components/auth-buttons";
 import { CopyLink } from "@/components/copy-link";
+import { SkillLinkedIn } from "@/components/skill-linkedin";
 import { formatDate } from "@/i18n/format";
 import { getDict } from "@/i18n/server";
 import { currentUser } from "@/lib/auth";
 import { passportForEmail } from "@/lib/passports";
+import { skillsForVersion } from "@/lib/passports";
 
 const link = "font-semibold text-ink underline decoration-magenta decoration-2 underline-offset-2 hover:text-magenta";
 
@@ -17,6 +20,13 @@ export default async function MePage() {
   const m = t.me;
   const latest = passport?.versions.find((v) => v.isLatest);
   const baseUrl = process.env.PUBLIC_BASE_URL ?? "https://passport.btumarket.ge";
+  const skills = passport && latest ? await skillsForVersion(passport.passportId, latest.code) : [];
+  const skillLinks = passport && latest ? linkedInSkillLinks(skills, { passportId: passport.passportId, code: latest.code }, baseUrl) : [];
+  if (skillLinks.length < skills.length) {
+    const kept = new Set(skillLinks.map((s) => s.recordId));
+    const bad = skills.filter((s) => !kept.has(s.recordId)).map((s) => `${s.recordId} "${s.dateEarned}"`);
+    console.warn(`/me: no linkedin link for ${passport!.passportId}, unreadable date earned: ${bad.join(", ")}`);
+  }
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 pt-20 pb-16 sm:pt-28 sm:pb-24">
@@ -81,6 +91,10 @@ export default async function MePage() {
               </div>
               <p className="mt-3 text-sm text-muted">{m.linkedInNote}</p>
             </section>
+          )}
+
+          {skillLinks.length > 0 && (
+            <SkillLinkedIn skills={skillLinks.map((s) => ({ key: s.skillId, name: s.skillName, date: formatDate(t.locale, s.dateEarned), url: s.url }))} />
           )}
         </>
       )}

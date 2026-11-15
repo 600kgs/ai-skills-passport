@@ -142,6 +142,10 @@ export const en = {
     linkedInNote: "LinkedIn opens with the details filled in. You decide whether to save it.",
     copyLink: "Copy verify link",
     copied: "Link copied",
+    skillsTitle: "Add skills one by one",
+    skillsText: "Optional: put each skill on your LinkedIn profile as its own certification from BTU.",
+    addSkillLinkedIn: "Add this skill to LinkedIn",
+    alreadyAdded: "Already added? Check your LinkedIn profile before adding it again.",
   },
   privacy: {
     title: "Privacy",
@@ -494,6 +498,10 @@ export const ka: Dict = {
     linkedInNote: "LinkedIn გაიხსნება შევსებული ველებით. შენახვა თქვენზეა.",
     copyLink: "შემოწმების ბმულის კოპირება",
     copied: "ბმული დაკოპირდა",
+    skillsTitle: "უნარების ცალ-ცალკე დამატება",
+    skillsText: "სურვილისამებრ: დაამატეთ თითოეული უნარი LinkedIn-ის პროფილზე ცალკე სერტიფიკატად, BTU-ს სახელით.",
+    addSkillLinkedIn: "ამ უნარის LinkedIn-ზე დამატება",
+    alreadyAdded: "უკვე დაამატეთ? ხელახლა დამატებამდე შეამოწმეთ LinkedIn-ის პროფილი.",
   },
   privacy: {
     title: "კონფიდენციალურობა",

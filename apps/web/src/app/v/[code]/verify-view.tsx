@@ -206,14 +206,14 @@ export default function VerifyView() {
 }
 
 // btu's own category stamps, the same art as on the pdf, set at a slight angle like ink stamps
-const STAMP: Record<string, string> = {
+export const STAMP: Record<string, string> = {
   "AI Skill": "/art/stamp-skill.png", "AI Applied Skill": "/art/stamp-applied.png", "AI Advanced Skill": "/art/stamp-advanced.png",
 };
 const TILT = [-4, 3, -2, 5, -5, 2];
 
-type Status = "pending" | "ok" | "warn" | "fail" | "idle";
+export type Status = "pending" | "ok" | "warn" | "fail" | "idle";
 // one check: what it says while waiting, and its result once known
-type Step = { wait: string; done: { status: Exclude<Status, "pending">; text: string } | null };
+export type Step = { wait: string; done: { status: Exclude<Status, "pending">; text: string } | null };
 
 const MARK: Record<Status, { tone: string; icon: React.ReactNode }> = {
   pending: { tone: "text-muted", icon: <circle cx="12" cy="12" r="8" strokeDasharray="3 3" /> },
@@ -223,7 +223,7 @@ const MARK: Record<Status, { tone: string; icon: React.ReactNode }> = {
   idle: { tone: "text-muted", icon: <circle cx="12" cy="12" r="9" /> },
 };
 
-function Check({ status, text }: { status: Status; text: string }) {
+export function Check({ status, text }: { status: Status; text: string }) {
   const m = MARK[status];
   return (
     <li className={`flex items-start gap-3 text-lg ${status === "pending" || status === "idle" ? "text-muted" : "text-ink"}`}>
@@ -236,7 +236,7 @@ function Check({ status, text }: { status: Status; text: string }) {
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+export function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="grid gap-1 py-3 sm:grid-cols-[9rem_1fr] sm:gap-4">
       <dt className="font-display text-xl text-blue">{label}</dt>

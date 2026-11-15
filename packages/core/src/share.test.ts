@@ -26,10 +26,10 @@ describe("linkedInAddUrl", () => {
   });
 });
 
-const skill = { passportId: "BTU-AI-000143", skillId: "SKL-008", skillName: "AI Workflow Automation", dateEarned: "2026-10-23", code: "F8ZZ-YDVZ-SH" };
+const skill = { passportId: "BTU-AI-000143", skillId: "SKL-008", skillName: "AI Workflow Automation", dateEarned: "2026-10-23", link: "K7QM-2XPA-9D" };
 
 describe("linkedInSkillAddUrl", () => {
-  it("fills linkedin's certification form with the skill, btu as the issuer and the verify page as proof", () => {
+  it("fills linkedin's certification form with the skill, btu as the issuer and the skill's own page as proof", () => {
     const url = new URL(linkedInSkillAddUrl(skill, "https://passport.btumarket.ge/")!);
     expect(url.origin + url.pathname).toBe("https://www.linkedin.com/profile/add");
     expect(Object.fromEntries(url.searchParams)).toEqual({
@@ -38,7 +38,7 @@ describe("linkedInSkillAddUrl", () => {
       organizationId: "28901188",
       issueYear: "2026",
       issueMonth: "10",
-      certUrl: "https://passport.btumarket.ge/v/F8ZZ-YDVZ-SH",
+      certUrl: "https://passport.btumarket.ge/s/K7QM-2XPA-9D",
       certId: "BTU-AI-000143-SKL-008",
     });
   });
@@ -69,17 +69,17 @@ describe("linkedInSkillAddUrl", () => {
 describe("linkedInSkillLinks", () => {
   it("skips a skill with a bad date and keeps the rest, with their own fields", () => {
     const skills = [
-      { recordId: "REC-0001", skillId: "SKL-001", skillName: "AI Literacy", dateEarned: "2026-09-12" },
-      { recordId: "REC-0002", skillId: "SKL-002", skillName: "Prompting", dateEarned: "12.09.2026" },
-      { recordId: "REC-0003", skillId: "SKL-008", skillName: "AI Workflow Automation", dateEarned: "2026-10-23" },
+      { recordId: "REC-0001", skillId: "SKL-001", skillName: "AI Literacy", dateEarned: "2026-09-12", link: "AAAA-AAAA-AA" },
+      { recordId: "REC-0002", skillId: "SKL-002", skillName: "Prompting", dateEarned: "12.09.2026", link: "BBBB-BBBB-BB" },
+      { recordId: "REC-0003", skillId: "SKL-008", skillName: "AI Workflow Automation", dateEarned: "2026-10-23", link: "CCCC-CCCC-CC" },
     ];
-    const links = linkedInSkillLinks(skills, { passportId: "BTU-AI-000143", code: "F8ZZ-YDVZ-SH" }, "https://x.ge");
+    const links = linkedInSkillLinks(skills, "BTU-AI-000143", "https://x.ge");
     expect(links.map((l) => l.recordId)).toEqual(["REC-0001", "REC-0003"]);
     expect(new URL(links[1]!.url).searchParams.get("certId")).toBe("BTU-AI-000143-SKL-008");
-    expect(new URL(links[1]!.url).searchParams.get("certUrl")).toBe("https://x.ge/v/F8ZZ-YDVZ-SH");
+    expect(new URL(links[1]!.url).searchParams.get("certUrl")).toBe("https://x.ge/s/CCCC-CCCC-CC");
   });
 
   it("gives an empty list when no date is usable", () => {
-    expect(linkedInSkillLinks([{ skillId: "SKL-001", skillName: "AI Literacy", dateEarned: "soon" }], { passportId: "BTU-AI-000143", code: "C" }, "https://x.ge")).toEqual([]);
+    expect(linkedInSkillLinks([{ skillId: "SKL-001", skillName: "AI Literacy", dateEarned: "soon", link: "C" }], "BTU-AI-000143", "https://x.ge")).toEqual([]);
   });
 });

@@ -101,3 +101,12 @@ export const auditLog = pgTable("audit_log", {
   subject: text("subject"),
   details: jsonb("details"),
 });
+
+// one permanent public link per student skill, for linkedin. the code is random like a version code,
+// so links can't be walked the way sequential passport and skill ids could
+export const skillLinks = pgTable("skill_links", {
+  code: text("code").primaryKey(),
+  passportId: text("passport_id").notNull().references(() => passports.passportId),
+  skillId: text("skill_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [uniqueIndex("skill_links_skill_idx").on(t.passportId, t.skillId)]);

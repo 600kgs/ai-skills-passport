@@ -10,6 +10,7 @@ import { getDict } from "@/i18n/server";
 import { currentUser } from "@/lib/auth";
 import { passportForEmail } from "@/lib/passports";
 import { skillsForVersion } from "@/lib/passports";
+import { skillLinkCodes } from "@/lib/skill-links";
 
 const link = "font-semibold text-ink underline decoration-magenta decoration-2 underline-offset-2 hover:text-magenta";
 
@@ -21,7 +22,9 @@ export default async function MePage() {
   const latest = passport?.versions.find((v) => v.isLatest);
   const baseUrl = process.env.PUBLIC_BASE_URL ?? "https://passport.btumarket.ge";
   const skills = passport && latest ? await skillsForVersion(passport.passportId, latest.code) : [];
-  const skillLinks = passport && latest ? linkedInSkillLinks(skills, { passportId: passport.passportId, code: latest.code }, baseUrl) : [];
+  const linkCodes = passport ? await skillLinkCodes(passport.passportId, skills.map((s) => s.skillId)) : new Map<string, string>();
+  const withLinks = skills.flatMap((s) => (linkCodes.has(s.skillId) ? [{ ...s, link: linkCodes.get(s.skillId)! }] : []));
+  const skillLinks = passport ? linkedInSkillLinks(withLinks, passport.passportId, baseUrl) : [];
   if (skillLinks.length < skills.length) {
     const kept = new Set(skillLinks.map((s) => s.recordId));
     const bad = skills.filter((s) => !kept.has(s.recordId)).map((s) => `${s.recordId} "${s.dateEarned}"`);

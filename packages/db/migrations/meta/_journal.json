@@ -36,6 +36,13 @@
       "when": 1793275518505,
       "tag": "0004_version_revocation",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794756907883,
+      "tag": "0005_skill_links",
+      "breakpoints": true
     }
   ]
 }

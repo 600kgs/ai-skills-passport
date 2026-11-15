@@ -1,6 +1,6 @@
 // read-only chain lookup by verification code. runs in the browser and in node,
 // so a verifier needs nothing from our server to check a record.
-import { address, type Base58EncodedBytes, createSolanaRpc, getAddressDecoder, getBase64Encoder } from "@solana/kit";
+import { type Address, address, type Base58EncodedBytes, createSolanaRpc, getAddressDecoder, getBase64Encoder } from "@solana/kit";
 import {
   deriveAttestationPda, deriveCredentialPda, deriveSchemaPda, deserializeAttestationData, fetchCredential, fetchMaybeAttestation,
   fetchSchema, getAttestationDecoder, SOLANA_ATTESTATION_SERVICE_PROGRAM_ADDRESS,
@@ -21,6 +21,17 @@ export async function findRecord(rpcUrl: string, authority: string, code: string
   const { credential, schema } = await issuerAddresses(authority);
   const nonce = getAddressDecoder().decode(await nonceFromCode(code));
   const [pda] = await deriveAttestationPda({ credential, schema, nonce });
+  return readRecord(rpc, credential, schema, pda);
+}
+
+// the same check from a record's address, for a page that must not reveal the version code
+// (a skill's page: the code would open the whole passport). null unless the record is btu's
+export async function findRecordAt(rpcUrl: string, authority: string, recordAddress: string): Promise<ChainRecord | null> {
+  const { credential, schema } = await issuerAddresses(authority);
+  return readRecord(createSolanaRpc(rpcUrl), credential, schema, address(recordAddress));
+}
+
+async function readRecord(rpc: ReturnType<typeof createSolanaRpc>, credential: Address, schema: Address, pda: Address): Promise<ChainRecord | null> {
   const att = await fetchMaybeAttestation(rpc, pda, { commitment: "confirmed" });
   if (!att.exists || att.data.credential !== credential || att.data.schema !== schema) return null;
   const data = deserializeAttestationData<AttestationData>((await fetchSchema(rpc, schema)).data, Uint8Array.from(att.data.data));

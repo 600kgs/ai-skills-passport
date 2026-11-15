@@ -29,7 +29,7 @@ const ICON: Record<Kind, React.ReactNode> = {
   revoked: <><circle cx="24" cy="24" r="19" /><path d="m11 11 26 26" /></>,
 };
 
-export function VerdictStamp({ outcome, extra }: { outcome: Kind; extra?: string }) {
+export function VerdictStamp({ outcome, title, extra }: { outcome: Kind; title?: string; extra?: string }) {
   const s = useDict().verify.outcomes[outcome];
   return (
     <div role="status" aria-live="polite" className={`flex items-start gap-5 p-6 sm:p-8 ${TONE[outcome]} ${outcome === "checking" ? "" : "stamp-land"}`}>
@@ -38,7 +38,7 @@ export function VerdictStamp({ outcome, extra }: { outcome: Kind; extra?: string
         {ICON[outcome]}
       </svg>
       <div>
-        <p className="font-display text-5xl sm:text-6xl">{s.title}</p>
+        <p className="font-display text-5xl sm:text-6xl">{title ?? s.title}</p>
         <p className="mt-2 text-lg">{extra ?? s.detail}</p>
       </div>
     </div>

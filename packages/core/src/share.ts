@@ -25,11 +25,12 @@ export function linkedInAddUrl(v: { passportId: string; code: string; issuedAt: 
 }
 
 export const verifyUrl = (code: string, publicBaseUrl: string) => `${publicBaseUrl.replace(/\/$/, "")}/v/${code}`;
+export const skillUrl = (link: string, publicBaseUrl: string) => `${publicBaseUrl.replace(/\/$/, "")}/s/${link}`;
 
 // one skill as its own linkedin certification. the certId pairs the passport with the catalog skill id,
 // so callers must merge a student's duplicate rows of one skill first. null when the date isn't usable
 export function linkedInSkillAddUrl(
-  s: { passportId: string; skillId: string; skillName: string; dateEarned: string; code: string },
+  s: { passportId: string; skillId: string; skillName: string; dateEarned: string; link: string },
   publicBaseUrl: string,
 ): string | null {
   // the sheet's calendar date, already btu's own day: no time zone to convert
@@ -41,8 +42,8 @@ export function linkedInSkillAddUrl(
     organizationId: BTU_LINKEDIN_ORG_ID,
     issueYear: m[1]!,
     issueMonth: String(Number(m[2]!)),
-    // the current version's verify page for now; it reads "outdated" once a newer version is issued
-    certUrl: verifyUrl(s.code, publicBaseUrl),
+    // the skill's own permanent page: it never reads "outdated" and shows no other skill
+    certUrl: skillUrl(s.link, publicBaseUrl),
     certId: `${s.passportId}-${s.skillId}`,
   });
   return `https://www.linkedin.com/profile/add?${params}`;
@@ -50,11 +51,11 @@ export function linkedInSkillAddUrl(
 
 // the per-skill links for /me. a skill whose date can't be read is left out rather than
 // breaking the whole page; the caller can log what's missing
-export function linkedInSkillLinks<T extends { skillId: string; skillName: string; dateEarned: string }>(
-  skills: T[], v: { passportId: string; code: string }, publicBaseUrl: string,
+export function linkedInSkillLinks<T extends { skillId: string; skillName: string; dateEarned: string; link: string }>(
+  skills: T[], passportId: string, publicBaseUrl: string,
 ): (T & { url: string })[] {
   return skills.flatMap((s) => {
-    const url = linkedInSkillAddUrl({ ...s, ...v }, publicBaseUrl);
+    const url = linkedInSkillAddUrl({ ...s, passportId }, publicBaseUrl);
     return url ? [{ ...s, url }] : [];
   });
 }

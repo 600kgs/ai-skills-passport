@@ -1,4 +1,4 @@
-// the empty upload template: the sheet's input columns, nothing else
+// the empty upload template: the columns a staff member fills in, nothing the system assigns
 import { currentStaff } from "@/lib/auth";
 import { uploadTemplate } from "@/lib/xlsx";
 

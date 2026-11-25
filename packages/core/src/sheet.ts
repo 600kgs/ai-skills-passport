@@ -1,7 +1,7 @@
 // turns the raw google sheet grid into validated skill records.
 // columns are found by header name, so btu can reorder or add columns safely.
 import { sha256, toHex } from "./hash.ts";
-import { realDate } from "./records.ts";
+import { normHeader, realDate } from "./records.ts";
 
 export const CATEGORIES = { "AI Skill": "BDG-AI-001", "AI Applied Skill": "BDG-AI-002", "AI Advanced Skill": "BDG-AI-003" } as const;
 export type Category = keyof typeof CATEGORIES;
@@ -54,7 +54,6 @@ export const SHEET_HEADERS = H;
 
 // the ledger note on a record whose row was deleted from the sheet; the admin overview lists these
 export const REMOVED_FROM_SHEET = "no longer in the sheet";
-export const normHeader = (s: unknown) => String(s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export async function parseSheet(rows: string[][]): Promise<ParsedSheet> {

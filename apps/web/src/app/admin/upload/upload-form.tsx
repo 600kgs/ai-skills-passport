@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
-import type { ImportPreview } from "@passport/core";
 import { useDict } from "@/i18n/client";
 import { fill } from "@/i18n/format";
-import { applyUpload, previewUpload, type ApplyState } from "./actions";
+import { applyUpload, previewUpload, type ApplyState, type Preview } from "./actions";
 
 const link = "font-semibold underline decoration-magenta decoration-2 underline-offset-2 hover:text-magenta";
 
@@ -15,7 +14,7 @@ export function UploadForm() {
   const rows = (n: number) => (n === 1 ? d.admin.rowOne : d.admin.rowMany);
   const input = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<ImportPreview | null>(null);
+  const [preview, setPreview] = useState<Preview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [applied, setApplied] = useState<ApplyState | null>(null);
   const [pending, start] = useTransition();
@@ -92,7 +91,7 @@ export function UploadForm() {
                 {preview.rows.map((r) => (
                   <tr key={r.line} className="border-b border-line align-top">
                     <td className="py-2 pr-4">{r.line}</td>
-                    <td className="py-2 pr-4 font-semibold whitespace-nowrap text-ink">{r.recordId || t.noRecordId}</td>
+                    <td className="py-2 pr-4 font-semibold text-ink">{r.label}</td>
                     <td className="py-2">
                       {r.ok ? <span className="font-semibold text-blue">{t.willAdd}</span> : <span className="block border-l-8 border-magenta pl-3">{r.errors.join("; ")}</span>}
                     </td>

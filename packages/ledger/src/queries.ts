@@ -13,7 +13,8 @@ export async function passportsWaitingToIssue(db: Db): Promise<string[]> {
 // a search term inside ilike, its own % and _ matched literally
 const contains = (q: string) => `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 
-export async function listRecords(db: Db, f: RecordFilters) {
+// perPage is raised for the excel download, which takes every matching record
+export async function listRecords(db: Db, f: RecordFilters, perPage = RECORDS_PER_PAGE) {
   const conds: SQL[] = [];
   if (f.q) {
     const like = contains(f.q);
@@ -29,7 +30,7 @@ export async function listRecords(db: Db, f: RecordFilters) {
   const [counted] = await db.select({ n: sql<number>`count(*)::int` }).from(skillAwards)
     .innerJoin(students, eq(students.studentId, skillAwards.studentId)).where(where);
   const total = counted?.n ?? 0;
-  const pages = Math.max(1, Math.ceil(total / RECORDS_PER_PAGE));
+  const pages = Math.max(1, Math.ceil(total / perPage));
   const page = Math.min(f.page, pages);
   const rows = await db.select({
     recordId: skillAwards.recordId, skillId: skillAwards.skillId, skillName: skillAwards.skillName, dateEarned: skillAwards.dateEarned,
@@ -43,8 +44,8 @@ export async function listRecords(db: Db, f: RecordFilters) {
     .where(where)
     // record ids grow with time; ordered by their number so REC-10000 lands after REC-9999
     .orderBy(desc(sql`coalesce(substring(${skillAwards.recordId} from '^REC-(\\d+)$')::int, 0)`), desc(skillAwards.recordId))
-    .limit(RECORDS_PER_PAGE)
-    .offset((page - 1) * RECORDS_PER_PAGE);
+    .limit(perPage)
+    .offset((page - 1) * perPage);
   return { rows, total, pages, page };
 }
 

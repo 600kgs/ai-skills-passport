@@ -1,13 +1,18 @@
 "use server";
 
-import { type ImportPreview, type ImportResult, UPLOAD_MAX_BYTES } from "@passport/core";
+import { parseRecordUpload, UPLOAD_MAX_BYTES } from "@passport/core";
+import { checkRecords, createRecords } from "@passport/ledger";
+import { auditLog } from "@passport/db";
 import { fill } from "@/i18n/format";
 import { getDict } from "@/i18n/server";
 import { currentStaff } from "@/lib/auth";
-import { runAdminJob } from "@/lib/queue";
+import { getDb } from "@/lib/db";
+import { enqueueIssue } from "@/lib/queue";
 import { readUpload } from "@/lib/xlsx";
 
-export type PreviewState = { ok: true; preview: ImportPreview } | { ok: false; message: string };
+export type PreviewRow = { line: number; label: string; ok: boolean; errors: string[] };
+export type Preview = { rows: PreviewRow[]; ignoredColumns: string[] };
+export type PreviewState = { ok: true; preview: Preview } | { ok: false; message: string };
 export type ApplyState = { ok: boolean; message: string; added?: string[] };
 type Texts = Awaited<ReturnType<typeof getDict>>["admin"]["upload"];
 
@@ -24,35 +29,51 @@ async function gridFrom(form: FormData, t: Texts): Promise<{ grid: string[][]; n
   }
 }
 
-// server actions are public endpoints, so each one checks the admin itself
+// the file's own problems plus the ledger's, line by line; the same check runs again right before adding
+async function check(grid: string[][]) {
+  const parsed = parseRecordUpload(grid);
+  if (parsed.error) return { error: parsed.error } as const;
+  const ledger = await checkRecords(getDb(), parsed.rows.map((r) => r.item));
+  const rows = parsed.rows.map((r, i) => {
+    const errors = [...r.errors, ...(ledger[i]?.errors ?? [])];
+    const s = r.item.student;
+    return { line: r.line, label: `${s.firstName} ${s.lastName} (${s.studentId}), ${r.item.record.skillId}`, ok: !errors.length, errors, item: r.item };
+  });
+  return { rows, ignoredColumns: parsed.ignoredColumns } as const;
+}
+
+// server actions are public endpoints, so each one checks the role itself
 export async function previewUpload(form: FormData): Promise<PreviewState> {
   const d = await getDict();
-  const t = d.admin.upload;
-  const admin = await currentStaff("admin");
-  if (!admin) return { ok: false, message: d.admin.actions.onlyAdmins };
-  const read = await gridFrom(form, t);
+  if (!(await currentStaff("admin"))) return { ok: false, message: d.admin.actions.onlyAdmins };
+  const read = await gridFrom(form, d.admin.upload);
   if (typeof read === "string") return { ok: false, message: read };
-  const outcome = await runAdminJob<ImportPreview>({ kind: "import-preview", grid: read.grid, by: admin.email }, 15000);
-  if (outcome.state === "failed") return { ok: false, message: fill(t.checkFailed, { error: outcome.error }) };
-  if (outcome.state === "waiting") return { ok: false, message: t.noAnswer };
-  return outcome.result.error ? { ok: false, message: outcome.result.error } : { ok: true, preview: outcome.result };
+  const c = await check(read.grid);
+  if ("error" in c) return { ok: false, message: c.error! };
+  return { ok: true, preview: { rows: c.rows.map(({ item: _, ...r }) => r), ignoredColumns: c.ignoredColumns } };
 }
 
 export async function applyUpload(form: FormData): Promise<ApplyState> {
   const d = await getDict();
   const t = d.admin.upload;
-  const admin = await currentStaff("admin");
-  if (!admin) return { ok: false, message: d.admin.actions.onlyAdmins };
+  const me = await currentStaff("admin");
+  if (!me) return { ok: false, message: d.admin.actions.onlyAdmins };
   const read = await gridFrom(form, t);
   if (typeof read === "string") return { ok: false, message: read };
-  const outcome = await runAdminJob<ImportResult>({ kind: "import-apply", grid: read.grid, fileName: read.name, by: admin.email }, 20000);
-  if (outcome.state === "failed") return { ok: false, message: fill(t.nothingAdded, { error: outcome.error }) };
-  if (outcome.state === "waiting") return { ok: true, message: t.stillAdding };
-  const r = outcome.result;
-  const n = r.added.length;
+  const c = await check(read.grid);
+  if ("error" in c) return { ok: false, message: fill(t.nothingAdded, { error: c.error! }) };
+  const valid = c.rows.filter((r) => r.ok);
+  if (!valid.length) return { ok: false, message: fill(t.nothingAdded, { error: t.noneCanAdd }) };
+  const r = await createRecords(getDb(), valid.map((v) => v.item), { by: me.email, source: "excel" });
+  const added = r.created.map((x) => x.recordId);
+  await getDb().insert(auditLog).values({
+    actor: me.email, action: "rows_imported", subject: read.name, details: { added, skipped: c.rows.length - added.length },
+  });
+  await enqueueIssue(r.queue);
+  const n = added.length;
+  const skipped = c.rows.length - n;
   return {
-    ok: true, added: r.added,
-    message: fill(t.added, { n, rows: n === 1 ? d.admin.rowOne : d.admin.rowMany })
-      + (r.skipped ? fill(t.skipped, { n: r.skipped }) : "") + (r.queued ? t.issuing : ""),
+    ok: true, added,
+    message: fill(t.added, { n, rows: n === 1 ? d.admin.rowOne : d.admin.rowMany }) + (skipped ? fill(t.skipped, { n: skipped }) : "") + (r.queue.length ? t.issuing : ""),
   };
 }

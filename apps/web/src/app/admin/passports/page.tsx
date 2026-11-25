@@ -66,7 +66,11 @@ export default async function AdminPassportsPage({ searchParams }: PageProps<"/a
 
       <div className="mt-8 flex flex-wrap items-baseline justify-between gap-4">
         <h2 id="passports-h" className="font-display text-4xl text-ink">{fill(total === 1 ? t.countOne : t.count, { n: total })}</h2>
-        {filtered && <Link href="/admin/passports" className={`text-ink ${link}`}>{t.clear}</Link>}
+        <span className="flex flex-wrap items-baseline gap-4">
+          {filtered && <Link href="/admin/passports" className={`text-ink ${link}`}>{t.clear}</Link>}
+          <a href={`/api/admin/export${queryString({ kind: "passports", q: f.q, program: f.program, level: f.level, updated: f.updated, sort: f.sort })}`}
+            className="border-2 border-ink px-4 pt-2 pb-1.5 font-display text-xl text-ink hover:bg-ink hover:text-white">{d.admin.records.download}</a>
+        </span>
       </div>
       <p className="mt-2 max-w-prose text-muted">{t.note}</p>
 

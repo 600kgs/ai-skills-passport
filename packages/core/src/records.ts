@@ -10,6 +10,9 @@ export type StudentInput = {
 export type RecordInput = { skillId: string; dateEarned: string; earnedThrough: string | null; verification: "PENDING" | "CONFIRMED" };
 export type NewRecord = { student: StudentInput; record: RecordInput };
 
+// spreadsheet headers compared loosely: case, spaces and line breaks don't matter
+export const normHeader = (s: unknown) => String(s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 // the shape alone lets 2026-02-31 through, and postgres would then reject it and roll back the whole write
 export const realDate = (s: string) => {

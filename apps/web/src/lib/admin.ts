@@ -71,7 +71,8 @@ export async function removedRecords() {
 const contains = (q: string) => `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 
 // one page of passports with their latest version, searched, filtered and sorted in the database
-export async function listPassports(f: PassportFilters) {
+// perPage is raised for the excel download, which takes every matching passport
+export async function listPassports(f: PassportFilters, perPage = PASSPORTS_PER_PAGE) {
   const db = getDb();
   const conds: SQL[] = [];
   if (f.q) {
@@ -100,7 +101,7 @@ export async function listPassports(f: PassportFilters) {
     .leftJoin(passportVersions, eq(passportVersions.id, passports.latestVersionId))
     .where(where);
   const total = counted?.n ?? 0;
-  const pages = Math.max(1, Math.ceil(total / PASSPORTS_PER_PAGE));
+  const pages = Math.max(1, Math.ceil(total / perPage));
   // a page past the end (an old link after rows went away) shows the last page, not an empty list
   const page = Math.min(f.page, pages);
   const rows = await db.select({
@@ -114,8 +115,8 @@ export async function listPassports(f: PassportFilters) {
     .leftJoin(passportVersions, eq(passportVersions.id, passports.latestVersionId))
     .where(where)
     .orderBy(...order)
-    .limit(PASSPORTS_PER_PAGE)
-    .offset((page - 1) * PASSPORTS_PER_PAGE);
+    .limit(perPage)
+    .offset((page - 1) * perPage);
   return { rows, total, pages, page };
 }
 

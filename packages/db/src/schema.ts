@@ -3,7 +3,8 @@
 import { sql } from "drizzle-orm";
 import { boolean, check, date, index, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
-export const awardState = pgEnum("award_state", ["pending", "applied", "failed", "ignored", "conflict"]);
+// deleted = removed by staff before issue; withdrawn = taken out by a revoke because it was a mistake. issue skips both
+export const awardState = pgEnum("award_state", ["pending", "applied", "failed", "ignored", "conflict", "deleted", "withdrawn"]);
 export const versionState = pgEnum("version_state", ["rendering", "anchoring", "issued", "failed"]);
 
 export const students = pgTable("students", {
@@ -43,9 +44,18 @@ export const skillAwards = pgTable("skill_awards", {
   state: awardState("state").notNull().default("pending"),
   error: text("error"),
   appliedInVersionId: integer("applied_in_version_id"),
+  // where the record came from, who made it and who confirmed or rejected it
+  source: text("source").notNull().default("sheet"),
+  workshopId: integer("workshop_id"),
+  createdBy: text("created_by"),
+  decidedBy: text("decided_by"),
+  decidedAt: timestamp("decided_at", { withTimezone: true }),
   firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [index("skill_awards_student_idx").on(t.studentId)]);
+}, (t) => [
+  index("skill_awards_student_idx").on(t.studentId),
+  check("skill_awards_source", sql`${t.source} in ('sheet', 'web', 'excel', 'workshop')`),
+]);
 
 export type VersionSkill = {
   recordId: string; rowHash: string; verification: string; skillName: string; category: string;

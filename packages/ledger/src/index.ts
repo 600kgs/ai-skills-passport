@@ -5,3 +5,4 @@ export * from "./queries.ts";
 export * from "./records.ts";
 export * from "./students.ts";
 export * from "./workshops.ts";
+export * from "./registrations.ts";

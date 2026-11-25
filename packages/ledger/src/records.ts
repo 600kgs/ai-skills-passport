@@ -57,51 +57,56 @@ async function waiting(tx: Tx, studentIds: string[]): Promise<string[]> {
   return rows.map((r) => r.passportId).sort();
 }
 
-export async function createRecords(db: Db, items: NewRecord[], opts: { by: string; source: RecordSource; workshopId?: number }) {
-  return withLedgerLock(db, async (tx) => {
-    const planned = await plan(tx, items);
-    const [maxes] = (await tx.execute<{ rec: number; pass: number }>(sql`
-      select coalesce(max(substring(record_id from '^REC-(\\d+)$')::int), 0) as rec,
-             (select coalesce(max(substring(passport_id from '^BTU-AI-(\\d+)$')::int), 0) from passports) as pass
-      from skill_awards`)).rows;
-    let nextRec = Number(maxes?.rec ?? 0);
-    let nextPass = Number(maxes?.pass ?? 0);
-    const passportOf = new Map((await tx.select().from(passports)).map((p) => [p.studentId, p.passportId]));
-    const created: { index: number; recordId: string; passportId: string }[] = [];
-    const rejected: { index: number; errors: string[] }[] = [];
-    const today = new Date().toISOString().slice(0, 10);
-    const now = new Date();
+export type CreateOptions = { by: string; source: RecordSource; workshopId?: number };
 
-    for (const p of planned) {
-      if (p.errors.length || !p.skill) { rejected.push({ index: p.index, errors: p.errors }); continue; }
-      let passportId = passportOf.get(p.student.studentId);
-      if (!passportId) {
-        passportId = `BTU-AI-${String(++nextPass).padStart(6, "0")}`;
-        await tx.insert(students).values(p.student);
-        await tx.insert(passports).values({ passportId, studentId: p.student.studentId, firstIssued: today });
-        passportOf.set(p.student.studentId, passportId);
-        await tx.insert(auditLog).values({ actor: opts.by, action: "passport_created", subject: passportId, details: { studentId: p.student.studentId } });
-      } else {
-        // program, level and status may change over a student's studies; identity was checked in plan()
-        await tx.update(students).set({ program: p.student.program, educationLevel: p.student.educationLevel, status: p.student.status, updatedAt: now })
-          .where(eq(students.studentId, p.student.studentId));
-      }
-      const recordId = `REC-${String(++nextRec).padStart(4, "0")}`;
-      const confirmed = p.record.verification === "CONFIRMED";
-      await tx.insert(skillAwards).values({
-        recordId, studentId: p.student.studentId, skillId: p.skill.skillId, skillName: p.skill.name, category: p.skill.category,
-        description: p.skill.description, earnedThrough: p.record.earnedThrough, dateEarned: p.record.dateEarned,
-        verification: p.record.verification, rowHash: await recordHash(p.student.studentId, p.record, p.skill),
-        state: confirmed ? "pending" : "ignored", source: opts.source, workshopId: opts.workshopId ?? null,
-        createdBy: opts.by, decidedBy: confirmed ? opts.by : null, decidedAt: confirmed ? now : null,
-      });
-      await tx.insert(auditLog).values({ actor: opts.by, action: "record_created", subject: recordId,
-        details: { studentId: p.student.studentId, skillId: p.skill.skillId, verification: p.record.verification, source: opts.source } });
-      created.push({ index: p.index, recordId, passportId });
+export function createRecords(db: Db, items: NewRecord[], opts: CreateOptions) {
+  return withLedgerLock(db, (tx) => createRecordsTx(tx, items, opts));
+}
+
+// the same, inside a transaction that already holds the ledger lock
+export async function createRecordsTx(tx: Tx, items: NewRecord[], opts: CreateOptions) {
+  const planned = await plan(tx, items);
+  const [maxes] = (await tx.execute<{ rec: number; pass: number }>(sql`
+    select coalesce(max(substring(record_id from '^REC-(\\d+)$')::int), 0) as rec,
+           (select coalesce(max(substring(passport_id from '^BTU-AI-(\\d+)$')::int), 0) from passports) as pass
+    from skill_awards`)).rows;
+  let nextRec = Number(maxes?.rec ?? 0);
+  let nextPass = Number(maxes?.pass ?? 0);
+  const passportOf = new Map((await tx.select().from(passports)).map((p) => [p.studentId, p.passportId]));
+  const created: { index: number; recordId: string; passportId: string }[] = [];
+  const rejected: { index: number; errors: string[] }[] = [];
+  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+
+  for (const p of planned) {
+    if (p.errors.length || !p.skill) { rejected.push({ index: p.index, errors: p.errors }); continue; }
+    let passportId = passportOf.get(p.student.studentId);
+    if (!passportId) {
+      passportId = `BTU-AI-${String(++nextPass).padStart(6, "0")}`;
+      await tx.insert(students).values(p.student);
+      await tx.insert(passports).values({ passportId, studentId: p.student.studentId, firstIssued: today });
+      passportOf.set(p.student.studentId, passportId);
+      await tx.insert(auditLog).values({ actor: opts.by, action: "passport_created", subject: passportId, details: { studentId: p.student.studentId } });
+    } else {
+      // program, level and status may change over a student's studies; identity was checked in plan()
+      await tx.update(students).set({ program: p.student.program, educationLevel: p.student.educationLevel, status: p.student.status, updatedAt: now })
+        .where(eq(students.studentId, p.student.studentId));
     }
-    const queue = await waiting(tx, [...new Set(planned.filter((p) => !p.errors.length).map((p) => p.student.studentId))]);
-    return { created, rejected, queue };
-  });
+    const recordId = `REC-${String(++nextRec).padStart(4, "0")}`;
+    const confirmed = p.record.verification === "CONFIRMED";
+    await tx.insert(skillAwards).values({
+      recordId, studentId: p.student.studentId, skillId: p.skill.skillId, skillName: p.skill.name, category: p.skill.category,
+      description: p.skill.description, earnedThrough: p.record.earnedThrough, dateEarned: p.record.dateEarned,
+      verification: p.record.verification, rowHash: await recordHash(p.student.studentId, p.record, p.skill),
+      state: confirmed ? "pending" : "ignored", source: opts.source, workshopId: opts.workshopId ?? null,
+      createdBy: opts.by, decidedBy: confirmed ? opts.by : null, decidedAt: confirmed ? now : null,
+    });
+    await tx.insert(auditLog).values({ actor: opts.by, action: "record_created", subject: recordId,
+      details: { studentId: p.student.studentId, skillId: p.skill.skillId, verification: p.record.verification, source: opts.source } });
+    created.push({ index: p.index, recordId, passportId });
+  }
+  const queue = await waiting(tx, [...new Set(planned.filter((p) => !p.errors.length).map((p) => p.student.studentId))]);
+  return { created, rejected, queue };
 }
 
 const EDITABLE = new Set(["pending", "ignored"]);

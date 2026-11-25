@@ -1,5 +1,6 @@
 export * from "./access.ts";
 export * from "./records.ts";
+export * from "./registrations.ts";
 export * from "./roles.ts";
 export * from "./admin-filters.ts";
 export * from "./admin-jobs.ts";

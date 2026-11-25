@@ -16,6 +16,11 @@ export async function readUpload(bytes: Buffer): Promise<string[][] | null> {
   return null;
 }
 
+// every tab of a workbook as text grids, for files whose header we look for ourselves (form exports)
+export async function readGrids(bytes: Buffer): Promise<string[][][]> {
+  return (await readXlsxFile(bytes)).map(({ data }) => data.map((row) => row.map(text)));
+}
+
 export async function uploadTemplate(): Promise<Buffer> {
   return writeXlsxFile([RECORD_UPLOAD_HEADERS.map((value) => ({ value, fontWeight: "bold" as const }))], {
     sheet: "Skill records",

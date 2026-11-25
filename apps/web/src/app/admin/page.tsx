@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { roleAtLeast } from "@passport/core";
-import { fill, formatAgo, formatDate } from "@/i18n/format";
+import { fill, formatDate } from "@/i18n/format";
 import { getDict } from "@/i18n/server";
 import { overview, pendingRecords, removedRecords } from "@/lib/admin";
-import { DecisionButtons, SyncButton } from "./buttons";
+import { DecisionButtons } from "./buttons";
 import { requireRole } from "./guard";
 
 const LOW_BALANCE_ISSUES = 20;
@@ -12,8 +12,7 @@ export default async function AdminOverviewPage() {
   const canDecide = roleAtLeast((await requireRole("viewer")).role, "admin");
   const [d, o, pending, removed] = await Promise.all([getDict(), overview(), pendingRecords(), removedRecords()]);
   const t = d.admin.overview;
-  const { counts, lastRun, issuer } = o;
-  const ago = (x: Date) => formatAgo(d.locale, x);
+  const { counts, issuer, failedVersions } = o;
   const short = (a: string) => `${a.slice(0, 4)}...${a.slice(-4)}`;
 
   return (
@@ -29,15 +28,10 @@ export default async function AdminOverviewPage() {
               </div>
             ))}
           </dl>
-          {canDecide && <SyncButton />}
         </div>
         <div className="mt-8 space-y-2 border-l-8 border-blue bg-panel p-5">
           {counts.failed > 0 && <p className="font-semibold text-ink">{fill(t.failed, { n: counts.failed })}</p>}
-          <p>
-            {!lastRun ? t.noSync
-              : lastRun.error ? fill(t.syncFailed, { ago: ago(lastRun.finishedAt ?? lastRun.startedAt), error: lastRun.error })
-              : <>{fill(lastRun.trigger === "manual" ? t.lastManual : t.lastChange, { ago: ago(lastRun.finishedAt ?? lastRun.startedAt) })} <span className="text-muted">{t.pollNote}</span></>}
-          </p>
+          <p>{t.issueNote}</p>
           {issuer && (
             <p className={issuer.issuesLeft !== null && issuer.issuesLeft < LOW_BALANCE_ISSUES ? "font-semibold text-magenta" : ""}>
               {issuer.balance === null ? t.keyUnknown
@@ -94,26 +88,24 @@ export default async function AdminOverviewPage() {
         </section>
       )}
 
-      <section aria-labelledby="problems-h" className="mt-14">
-        <h2 id="problems-h" className="flex items-baseline gap-3 border-b-4 border-blue pb-2 font-display text-4xl text-ink">
-          {t.problemsTitle} {o.problems.length > 0 && <span className="bg-ink px-2 text-3xl text-white">{o.problems.length}</span>}
-        </h2>
-        {o.problems.length === 0 ? (
-          <p className="mt-4 text-muted">{t.problemsEmpty}</p>
-        ) : (
-          <>
-            <p className="mt-4 max-w-prose text-muted">{t.problemsHelp}</p>
-            <ul className="mt-4 space-y-3">
-              {o.problems.map((p) => (
-                <li key={p.row} className="border-l-8 border-magenta bg-panel p-4">
-                  <p className="font-display text-xl text-ink">{fill(t.row, { row: p.row })}{p.recordId && `, ${p.recordId}`}</p>
-                  <p className="mt-1">{p.note}</p>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </section>
+      {failedVersions.length > 0 && (
+        <section aria-labelledby="failed-h" className="mt-14">
+          <h2 id="failed-h" className="flex items-baseline gap-3 border-b-4 border-blue pb-2 font-display text-4xl text-ink">
+            {t.failedTitle} <span className="bg-ink px-2 text-3xl text-white">{failedVersions.length}</span>
+          </h2>
+          <p className="mt-4 max-w-prose text-muted">{t.failedHelp}</p>
+          <ul className="mt-4 space-y-3">
+            {failedVersions.map((v) => (
+              <li key={`${v.passportId}-${v.versionNo}`} className="border-l-8 border-magenta bg-panel p-4">
+                <p className="font-display text-xl text-ink">
+                  <Link href={`/admin/passports/${v.passportId}`} className="underline decoration-magenta decoration-2 underline-offset-2 hover:text-magenta">{v.passportId}</Link> V{v.versionNo}
+                </p>
+                {v.error && <p className="mt-1 break-words">{v.error}</p>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </>
   );
 }

@@ -56,8 +56,6 @@ services:
       DATABASE_URL: postgres://passport:${POSTGRES_PASSWORD}@db:5432/passport
       GOTENBERG_URL: http://gotenberg:3000
       STORAGE_DIR: /data/storage
-      SHEET_ID: ${SHEET_ID:?}
-      GOOGLE_SERVICE_ACCOUNT_FILE: /run/secrets/service-account
       SOLANA_RPC_URL: ${SOLANA_RPC_URL:?}
       SOLANA_WS_URL: ${SOLANA_WS_URL:?}
       ISSUER_KEY_FILE: /run/secrets/issuer-key
@@ -68,7 +66,6 @@ services:
       MAIL_FROM_EMAIL: ${MAIL_FROM_EMAIL:-}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-BTU AI Skills Passport}
     secrets:
-      - service-account
       - issuer-key
     volumes:
       - storage:/data/storage
@@ -98,8 +95,6 @@ services:
 
 # key files stay on the host (chmod 600, owned by the deploy user) and are mounted read-only
 secrets:
-  service-account:
-    file: ./secrets/service-account.json
   issuer-key:
     file: ./secrets/issuer.json
 

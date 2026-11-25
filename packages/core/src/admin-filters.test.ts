@@ -25,16 +25,21 @@ describe("passportFilters", () => {
 
 describe("activityFilters", () => {
   it("defaults to everything, newest first", () => {
-    expect(activityFilters({})).toEqual({ type: "", q: "", before: null, runsBefore: null, problemsOnly: false });
+    expect(activityFilters({})).toEqual({ type: "", q: "", before: null });
   });
 
   it("reads type, id search and paging", () => {
-    expect(activityFilters({ type: "email", q: "btu-ai-000143", before: "120", runsBefore: "40", problems: "1" }))
-      .toEqual({ type: "email", q: "BTU-AI-000143", before: 120, runsBefore: 40, problemsOnly: true });
+    expect(activityFilters({ type: "records", q: "btu-ai-000143", before: "120" }))
+      .toEqual({ type: "records", q: "BTU-AI-000143", before: 120 });
   });
 
   it("ignores unknown types and bad cursors", () => {
-    expect(activityFilters({ type: "toString", before: "abc", runsBefore: "0" })).toMatchObject({ type: "", before: null, runsBefore: null });
+    expect(activityFilters({ type: "toString", before: "abc" })).toMatchObject({ type: "", before: null });
+  });
+
+  it("has no sheet type any more", () => {
+    expect(activityFilters({ type: "sheet" }).type).toBe("");
+    expect(activityFilters({ type: "staff" }).type).toBe("staff");
   });
 });
 

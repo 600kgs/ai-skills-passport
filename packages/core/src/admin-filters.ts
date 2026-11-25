@@ -72,9 +72,9 @@ export function recordFilters(p: Params): RecordFilters {
 
 // which audit actions each activity filter shows
 export const ACTIVITY_TYPES = {
-  admin: ["record_confirmed", "record_rejected", "sync_requested", "rows_imported", "ledger_reset"],
-  issued: ["passport_created", "version_issued", "version_revoked"],
-  sheet: ["award_recorded", "award_updated", "award_removed"],
+  records: ["record_created", "record_updated", "record_deleted", "record_confirmed", "record_rejected", "rows_imported", "student_updated", "record_withdrawn"],
+  issued: ["passport_created", "version_issued", "version_revoked", "ledger_reset"],
+  staff: ["staff_added", "staff_role_changed", "staff_removed", "skill_added", "skill_updated"],
   email: ["student_notified"],
 } as const;
 export type ActivityType = keyof typeof ACTIVITY_TYPES;
@@ -85,8 +85,6 @@ export type ActivityFilters = {
   q: string;
   // keyset paging: show entries older than this id. stays fast however long the log grows
   before: number | null;
-  runsBefore: number | null;
-  problemsOnly: boolean;
 };
 
 export function activityFilters(p: Params): ActivityFilters {
@@ -96,8 +94,6 @@ export function activityFilters(p: Params): ActivityFilters {
     type: Object.hasOwn(ACTIVITY_TYPES, type) ? (type as ActivityType) : "",
     q: text(p, "q", 40).toUpperCase(),
     before: id(p, "before"),
-    runsBefore: id(p, "runsBefore"),
-    problemsOnly: one(p, "problems") === "1",
   };
 }
 

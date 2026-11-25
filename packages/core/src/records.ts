@@ -3,6 +3,13 @@
 import { isBtuAccount } from "./access.ts";
 import { sha256, toHex } from "./hash.ts";
 
+// the three passport categories and the stamp each one carries on the pdf
+export const CATEGORIES = { "AI Skill": "BDG-AI-001", "AI Applied Skill": "BDG-AI-002", "AI Advanced Skill": "BDG-AI-003" } as const;
+export type Category = keyof typeof CATEGORIES;
+
+// the note on records whose row was deleted from the old google sheet, before staff entered records on the website
+export const REMOVED_FROM_SHEET = "no longer in the sheet";
+
 export type StudentInput = {
   studentId: string; firstName: string; lastName: string; email: string;
   program: string; educationLevel: string; status: string;

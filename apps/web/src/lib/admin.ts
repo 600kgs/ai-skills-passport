@@ -3,7 +3,7 @@ import {
   ACTIVITY_PER_PAGE, ACTIVITY_TYPES, type ActivityFilters, authorizedSigners, normalizeCode, type PassportFilters, PASSPORTS_PER_PAGE,
   REMOVED_FROM_SHEET,
 } from "@passport/core";
-import { and, auditLog, desc, eq, inArray, lt, passports, passportVersions, skillAwards, type SQL, sql, students, syncRuns } from "@passport/db";
+import { and, auditLog, desc, eq, inArray, lt, passports, passportVersions, skillAwards, type SQL, sql, students } from "@passport/db";
 import { getDb } from "@/lib/db";
 
 const SOL_PER_ISSUE = 0.0017; // measured on devnet, 2026-10-22
@@ -16,15 +16,15 @@ export async function overview() {
            (select count(*) from passport_versions where state = 'issued')::int as issued,
            (select count(*) from passport_versions where state in ('rendering', 'anchoring'))::int as in_progress,
            (select count(*) from passport_versions where state = 'failed')::int as failed`)).rows;
-  const [lastRun] = await db.select().from(syncRuns).orderBy(desc(syncRuns.id)).limit(1);
-  const [lastProblems] = await db.select().from(syncRuns).where(sql`${syncRuns.error} is null`).orderBy(desc(syncRuns.id)).limit(1);
+  // versions that stopped issuing, so someone can look at them (the worker retries on its own first)
+  const failedVersions = await db.select({ passportId: passportVersions.passportId, versionNo: passportVersions.versionNo, error: passportVersions.error })
+    .from(passportVersions).where(eq(passportVersions.state, "failed")).orderBy(desc(passportVersions.id)).limit(20);
   // the key the chain accepts right now, not whoever signed last: right after a rotation they differ
   const signer = await currentSigner();
   const balance = signer ? await solBalance(signer) : null;
   return {
     counts: counts!,
-    lastRun: lastRun ?? null,
-    problems: lastProblems?.problems ?? [],
+    failedVersions,
     issuer: signer ? { address: signer, balance, issuesLeft: balance === null ? null : Math.floor(balance / SOL_PER_ISSUE) } : null,
   };
 }
@@ -166,23 +166,15 @@ export async function activityPage(f: ActivityFilters) {
   if (f.type) auditConds.push(inArray(auditLog.action, [...ACTIVITY_TYPES[f.type]]));
   if (f.q) auditConds.push(sql`${auditLog.subject} ilike ${contains(f.q)}`);
   if (f.before) auditConds.push(lt(auditLog.id, f.before));
-  const runConds: SQL[] = [];
-  if (f.problemsOnly) runConds.push(sql`(${syncRuns.error} is not null or ${syncRuns.failedRecords} > 0)`);
-  if (f.runsBefore) runConds.push(lt(syncRuns.id, f.runsBefore));
 
   // one extra row tells whether an older page exists
-  const [audit, runs] = await Promise.all([
-    db.select().from(auditLog).where(auditConds.length ? and(...auditConds) : undefined).orderBy(desc(auditLog.id)).limit(ACTIVITY_PER_PAGE + 1),
-    db.select().from(syncRuns).where(runConds.length ? and(...runConds) : undefined).orderBy(desc(syncRuns.id)).limit(ACTIVITY_PER_PAGE + 1),
-  ]);
+  const audit = await db.select().from(auditLog).where(auditConds.length ? and(...auditConds) : undefined).orderBy(desc(auditLog.id)).limit(ACTIVITY_PER_PAGE + 1);
   // which subjects are passports that exist, so the page can link them
   const ids = [...new Set(audit.map((a) => a.subject).filter((s): s is string => !!s && s.startsWith("BTU-AI-")))];
   const known = ids.length ? await db.select({ id: passports.passportId }).from(passports).where(inArray(passports.passportId, ids)) : [];
   return {
     audit: audit.slice(0, ACTIVITY_PER_PAGE),
     olderAudit: audit.length > ACTIVITY_PER_PAGE ? audit[ACTIVITY_PER_PAGE - 1]!.id : null,
-    runs: runs.slice(0, ACTIVITY_PER_PAGE),
-    olderRuns: runs.length > ACTIVITY_PER_PAGE ? runs[ACTIVITY_PER_PAGE - 1]!.id : null,
     passportIds: new Set(known.map((k) => k.id)),
   };
 }

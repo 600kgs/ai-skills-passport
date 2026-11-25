@@ -19,30 +19,29 @@
 
   <!-- zones -->
   <text x="20" y="64" class="zone">BTU</text>
-  <rect x="250" y="44" width="500" height="526" fill="#f6f6ff" stroke="#0000b5" stroke-width="1.5"/>
+  <rect x="250" y="48" width="500" height="522" fill="#f6f6ff" stroke="#0000b5" stroke-width="1.5"/>
   <text x="266" y="66" class="zone">SERVER (DOCKER COMPOSE)</text>
   <text x="780" y="64" class="zone">PUBLIC</text>
 
   <!-- btu side -->
-  <rect x="20" y="80" width="200" height="66" class="ext"/>
+  <rect x="20" y="80" width="200" height="120" class="ext"/>
   <text x="34" y="106" class="t">BTU staff</text>
-  <text x="34" y="126" class="s">enter confirmed skills</text>
-  <rect x="20" y="200" width="200" height="86" class="ext"/>
-  <text x="34" y="226" class="t">Google Sheet</text>
-  <text x="34" y="246" class="s">the source of truth for</text>
-  <text x="34" y="263" class="s">confirmed skill records</text>
+  <text x="34" y="128" class="s">by role: viewer, workshop</text>
+  <text x="34" y="145" class="s">editor, admin, superadmin</text>
+  <text x="34" y="170" class="s">add and confirm skills, upload</text>
+  <text x="34" y="187" class="s">Excel and workshop lists</text>
 
   <!-- worker -->
   <rect x="280" y="80" width="200" height="206" class="box"/>
   <rect x="280" y="80" width="200" height="30" fill="#0000b5"/>
   <text x="292" y="101" class="th">Worker</text>
-  <text x="292" y="132" class="s">sync every 15 s: read, validate,</text>
-  <text x="292" y="149" class="s">record, write status back</text>
+  <text x="292" y="132" class="s">every minute: queue any</text>
+  <text x="292" y="149" class="s">confirmed skill still waiting</text>
   <text x="292" y="174" class="s">issue queue (pg-boss):</text>
   <text x="292" y="191" class="s">render, store, attest</text>
   <text x="292" y="216" class="s">notify queue: email the student</text>
-  <text x="292" y="241" class="s">admin jobs: confirm, reject,</text>
-  <text x="292" y="258" class="s">Excel import, sync now</text>
+  <text x="292" y="241" class="s">admin jobs: revoke a version</text>
+  <text x="292" y="258" class="s">(needs the issuer key)</text>
 
   <!-- web -->
   <rect x="520" y="80" width="200" height="206" class="box"/>
@@ -51,8 +50,8 @@
   <text x="532" y="132" class="s">verify page: public, no login</text>
   <text x="532" y="157" class="s">student: BTU Google sign-in,</text>
   <text x="532" y="174" class="s">download, share to LinkedIn</text>
-  <text x="532" y="199" class="s">admin: status, confirm/reject,</text>
-  <text x="532" y="216" class="s">Excel upload, activity</text>
+  <text x="532" y="199" class="s">staff pages by role: records,</text>
+  <text x="532" y="216" class="s">Excel, workshops, revoke, log</text>
   <text x="532" y="241" class="s">issuer file on the domain</text>
   <text x="532" y="258" class="s">(/.well-known)</text>
 
@@ -69,7 +68,7 @@
   <text x="532" y="382" class="s">students, passports</text>
   <text x="532" y="399" class="s">skill records and their state</text>
   <text x="532" y="416" class="s">versions: code, hash, tx</text>
-  <text x="532" y="433" class="s">sync runs, audit log</text>
+  <text x="532" y="433" class="s">staff, skills, workshops, log</text>
   <text x="532" y="450" class="s">job queue tables</text>
 
   <!-- public side -->
@@ -87,12 +86,10 @@
   <text x="794" y="466" class="t">Brevo</text>
   <text x="794" y="486" class="s">email to the student</text>
 
-  <!-- staff to sheet, sheet to worker and back -->
-  <path d="M120 146 V196" class="l"/>
-  <path d="M220 228 H276" class="l"/>
-  <text x="228" y="221" class="lab">read</text>
-  <path d="M276 262 H224" class="l"/>
-  <text x="228" y="280" class="lab">status</text>
+
+  <!-- staff sign in to the web app's staff pages; drawn first so the chain line crosses over it -->
+  <path d="M220 110 H238 V31 H600 V76" class="l"/>
+  <text x="410" y="43" class="lab">staff sign in with BTU Google</text>
 
   <!-- worker internals -->
   <path d="M380 286 V326" class="l"/>
@@ -101,8 +98,8 @@
   <path d="M620 286 V326" class="l"/>
 
   <!-- the chain: worker writes, employer reads -->
-  <path d="M380 80 V24 H880 V76" class="lm"/>
-  <text x="520" y="18" class="labm">attest each version: hash + version</text>
+  <path d="M380 80 V20 H880 V76" class="lm"/>
+  <text x="520" y="14" class="labm">attest each version: hash + version</text>
   <path d="M880 210 V170" class="lm"/>
   <text x="886" y="196" class="labm">reads it directly</text>
 

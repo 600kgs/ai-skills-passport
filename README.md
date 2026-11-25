@@ -4,7 +4,7 @@
 
 **[ქართული ვერსია](README.ka.md)**
 
-BTU confirms a student's AI skill in its Google Sheet. Seconds later the student has a new version of their multi-page PDF passport in BTU's design, its fingerprint is on the Solana blockchain, and anyone can check that the PDF is genuine, without an account and without having to trust our server.
+BTU staff confirm a student's AI skill on the admin page. Seconds later the student has a new version of their multi-page PDF passport in BTU's design, its fingerprint is on the Solana blockchain, and anyone can check that the PDF is genuine, without an account and without having to trust our server.
 
 Built by team **Git Happens** (Oto Sepashvili, Nika Loliashvili) for the BTU AI Skills Digital Passport hackathon, October 2026.
 
@@ -20,7 +20,8 @@ Built by team **Git Happens** (Oto Sepashvili, Nika Loliashvili) for the BTU AI 
 
 ## What it does
 
-- **BTU staff** keep working in the Google Sheet they already use, or upload an Excel file on the admin page. Every row is validated; a bad row never reaches a passport and the sheet shows why.
+- **BTU staff** add skill records on the admin pages: one at a time, from an Excel file, or from a workshop's list of who passed. Each person has a role (viewer, workshop editor, admin, superadmin), every record is checked before it is saved, and every action is logged with their name.
+- **Workshops and hackathons** that earn a skill are listed on the site, each with a link to its registration form.
 - **Students** get one permanent Passport ID. Each confirmed skill issues a new version: a new PDF, a new verification code and a new on-chain record. They sign in with their BTU Google account, download their PDFs, get an email for every new version and can add the passport to LinkedIn in one click.
 - **Employers** open the code from the PDF or its QR code and drop the PDF on the page. They get one of four answers: authentic and latest, authentic but outdated, modified, or unknown.
 
@@ -38,18 +39,18 @@ The whole point of the system is that a fake PDF gets caught, even if our server
 
 ![Architecture](docs/architecture.svg)
 
-Google Sheet → **worker** (sync every 15 s, validate, ledger in Postgres) → render the PDF once with Gotenberg → hash → attestation on Solana → the version becomes "latest" only after the chain write succeeds → email the student → write the status back to the sheet. Issued PDFs are stored once and never re-rendered, because a re-render produces different bytes. Details: [architecture (English)](docs/ARCHITECTURE.md), [ქართული](docs/ARCHITECTURE.ka.md).
+Staff pages (role check, validate, write the ledger in Postgres) → **worker** issue job → render the PDF once with Gotenberg → hash → attestation on Solana → the version becomes "latest" only after the chain write succeeds → email the student. Issued PDFs are stored once and never re-rendered, because a re-render produces different bytes. Details: [architecture (English)](docs/ARCHITECTURE.md), [ქართული](docs/ARCHITECTURE.ka.md).
 
 ## The brief's demo scenarios
 
 | Scenario | What happens | Where |
 | --- | --- | --- |
-| Add a new student | One passport with a permanent ID (BTU-AI-000125) | [sync.ts](apps/worker/src/sync.ts) |
+| Add a new student | One passport with a permanent ID (BTU-AI-000125) | [records.ts](packages/ledger/src/records.ts) |
 | First passport generation | Multi-page PDF in BTU's design; pages grow with the skills | [pdf/template.ts](apps/worker/src/pdf/template.ts) |
-| New confirmed skill in the sheet | Picked up within 15 s, or at once via the admin page | [sync.ts](apps/worker/src/sync.ts), [sheet.ts](packages/core/src/sheet.ts) |
+| New confirmed skill | Added or confirmed on the admin page, issued within seconds | [records.ts](packages/ledger/src/records.ts) |
 | New skill appears | The student's passport gets a new version | [issue.ts](apps/worker/src/issue.ts) |
-| Repeated sync | A Record ID is never added twice (unique key in the ledger) | [db schema](packages/db/src) |
-| Wrong student identifier | The row is marked FAILED with the reason; nothing is issued | [sheet.ts](packages/core/src/sheet.ts) |
+| Repeated upload | Record IDs are assigned by the system and never reused; a workshop list can't add a record twice | [registrations.ts](packages/ledger/src/registrations.ts) |
+| Wrong student identifier | The record is refused with the reason; nothing is issued | [records.ts](packages/core/src/records.ts) |
 | Passport update | Passport ID, first issue date and earlier skills are kept | [issue.ts](apps/worker/src/issue.ts) |
 | New version issued | New PDF, new code, new attestation | [issue.ts](apps/worker/src/issue.ts), [chain.ts](apps/worker/src/chain.ts) |
 | Check an unmodified PDF | "Authentic", checked in the browser against the chain | [verify page](apps/web/src/app/v/%5Bcode%5D), [chain-read.ts](packages/core/src/chain-read.ts) |
@@ -59,7 +60,7 @@ Google Sheet → **worker** (sync every 15 s, validate, ledger in Postgres) → 
 | Student access | BTU Google sign-in; each student sees and downloads only their own PDFs | [me](apps/web/src/app/me/page.tsx), [pdf route](apps/web/src/app/api/pdf/%5Bcode%5D/route.ts) |
 | Public verification | No login; the code or QR opens the record | [verify page](apps/web/src/app/v/%5Bcode%5D) |
 
-From the optional extras: a QR code on every PDF page, an admin panel (status, confirm or reject pending skills, passports, activity log), Excel import with a preview, email notifications, LinkedIn sharing, and a cost plan for mainnet (daily Merkle batching).
+From the optional extras: a QR code on every PDF page, an admin panel with staff roles (records, confirm or reject, passports, workshops, revoke, activity log), Excel import with a preview and Excel download, email notifications, LinkedIn sharing, and a cost plan for mainnet (daily Merkle batching).
 
 ## Measured
 
@@ -67,8 +68,6 @@ From the optional extras: a QR code on every PDF page, an admin panel (status, c
 | --- | --- |
 | Confirm click to issued version, live server | about 3 s |
 | Render + write to the chain | 1.6 to 2.5 s; 43 versions issued, 0 failed |
-| Sync a 5,000-row sheet, nothing new | 0.39 s |
-| First import of 5,000 new records | 4.6 s, once |
 | One version on chain | 0.00172212 SOL deposit + 0.000005 SOL fee |
 | Load test, web capped to the server's 2 CPU / 4 GB (local) | verify API about 700 req/s, verify page about 175 req/s, 0 errors at 1,000 concurrent |
 
@@ -76,12 +75,13 @@ From the optional extras: a QR code on every PDF page, an admin panel (status, c
 
 ## Stack
 
-TypeScript everywhere, so the hashing and chain-reading code is the same on the server and in the verifier's browser. Next.js 16 (site), a Node worker with pg-boss (queue in Postgres), PostgreSQL 17 with Drizzle, Gotenberg (headless Chromium) for the PDF, `@solana/kit` + `sas-lib`, Google Sheets API with a service account, Better Auth (BTU Google accounts only), Brevo for email. Runs as Docker Compose behind Caddy on one VM; GitHub Actions runs typecheck, lint, about 90 tests and a build on every push, plus a live check that verifies real issued PDFs (and the forged one from the pitch) against the public chain, the way a third party would: `pnpm --filter @passport/worker test:live`.
+TypeScript everywhere, so the hashing and chain-reading code is the same on the server and in the verifier's browser. Next.js 16 (site), a Node worker with pg-boss (queue in Postgres), PostgreSQL 17 with Drizzle, Gotenberg (headless Chromium) for the PDF, `@solana/kit` + `sas-lib`, Better Auth (BTU Google accounts only), Brevo for email. Runs as Docker Compose behind Caddy on one VM; GitHub Actions runs typecheck, lint, about 90 tests and a build on every push, plus a live check that verifies real issued PDFs (and the forged one from the pitch) against the public chain, the way a third party would: `pnpm --filter @passport/worker test:live`.
 
 ```
 apps/web        site: verify page, student page, admin, issuer file
-apps/worker     sheet sync, issue queue, PDF, chain writes, email; scripts/ for keys and audits
-packages/core   shared rules: sheet parsing, codes, hashing, chain reads, verdicts
+apps/worker     issue queue, PDF, chain writes, revoke, email; scripts/ for keys and audits
+packages/core   shared rules: record checks, roles, file parsing, codes, hashing, chain reads, verdicts
+packages/ledger every database write staff make, under the issue lock
 packages/db     schema and migrations
 docs/           architecture (English, Georgian)
 ```
@@ -92,7 +92,7 @@ Needs Node 24+, pnpm (via `corepack enable`) and Docker.
 
 ```bash
 pnpm install
-cp .env.example .env          # fill in the sheet id, Google OAuth and the service account path
+cp .env.example .env          # fill in Google OAuth and ADMIN_EMAILS
 docker compose up -d          # Postgres on 5433, Gotenberg on 3100
 pnpm --filter @passport/worker setup-issuer   # devnet keys, BTU credential and schema
 pnpm dev                      # site on http://localhost:3000, worker alongside
@@ -103,4 +103,4 @@ Production uses `docker-compose.prod.yml` (web, worker, Postgres, Gotenberg, Cad
 
 ## Before a real rollout
 
-Honest limits of the test deployment: it runs on Solana devnet with a test issuer on our domain; an issued version can be revoked (`revoke` closes its chain record and the verify page shows it as revoked, with the reason), but leaving the withdrawn skill out of the next version is still a manual step; backups and monitoring are not switched on, because all data is test data. The rollout plan: BTU's own authority key on a hardware wallet, the issuer file on btu.edu.ge, mainnet with daily batching, backups and alerts, then a gradual start with one group of students. See [section 8 of the architecture](docs/ARCHITECTURE.md#8-for-a-real-rollout).
+Honest limits of the test deployment: it runs on Solana devnet with a test issuer on our domain; a superadmin can revoke an issued version from the website (its chain record is closed, the verify page shows the reason, and the student gets a corrected version without the wrong skill); backups and monitoring are not switched on, because all data is test data. The rollout plan: BTU's own authority key on a hardware wallet, the issuer file on btu.edu.ge, mainnet with daily batching, backups and alerts, then a gradual start with one group of students. See [section 8 of the architecture](docs/ARCHITECTURE.md#8-for-a-real-rollout).

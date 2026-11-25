@@ -1,11 +1,11 @@
 import { getDict } from "@/i18n/server";
-import { requireAdmin } from "../guard";
+import { requireRole } from "../guard";
 import { UploadForm } from "./upload-form";
 
 const link = "font-semibold text-ink underline decoration-magenta decoration-2 underline-offset-2 hover:text-magenta";
 
 export default async function AdminUploadPage() {
-  await requireAdmin();
+  await requireRole("admin");
   const t = (await getDict()).admin.upload;
   return (
     <section aria-labelledby="upload-h" className="mt-10">

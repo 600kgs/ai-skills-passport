@@ -19,7 +19,7 @@ export async function SiteHeader() {
             {t.site.university}
           </a>
           <LangSwitch />
-          {user?.isAdmin && <Link href="/admin" className="font-display text-lg hover:text-yellow">{t.nav.admin}</Link>}
+          {user?.role && <Link href="/admin" className="font-display text-lg hover:text-yellow">{t.nav.admin}</Link>}
           <Link href={user ? "/me" : "/login"} className="bg-magenta px-3 pt-1.5 pb-1 font-display text-lg leading-none text-white hover:bg-magenta-deep">
             {user ? t.nav.myPassport : t.nav.signIn}
           </Link>

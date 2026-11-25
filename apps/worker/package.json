@@ -21,6 +21,7 @@
     "@googleapis/sheets": "^18.1.1",
     "@passport/core": "workspace:*",
     "@passport/db": "workspace:*",
+    "@passport/ledger": "workspace:*",
     "@solana/kit": "^5.5.1",
     "pg-boss": "^12.38.0",
     "qrcode": "^1.5.4",

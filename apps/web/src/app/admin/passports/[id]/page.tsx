@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { REMOVED_FROM_SHEET } from "@passport/core";
+import { REMOVED_FROM_SHEET, roleAtLeast } from "@passport/core";
 import { fill, formatDate, formatDateTime } from "@/i18n/format";
 import { getDict } from "@/i18n/server";
 import { loggedVersion, passportDetail } from "@/lib/admin";
-import { requireAdmin } from "../../guard";
+import { requireRole } from "../../guard";
 
 const link = "underline decoration-magenta decoration-2 underline-offset-2 hover:text-magenta";
 const th = "py-2 pr-4 font-display text-xl font-normal text-blue";
 
 export default async function AdminPassportPage({ params }: PageProps<"/admin/passports/[id]">) {
-  await requireAdmin();
+  // viewers see the record, only admins may open a student's pdf
+  const canPdf = roleAtLeast((await requireRole("viewer")).role, "admin");
   const [d, p] = await Promise.all([getDict(), passportDetail((await params).id)]);
   if (!p) notFound();
   const t = d.admin.passport;
@@ -80,7 +81,7 @@ export default async function AdminPassportPage({ params }: PageProps<"/admin/pa
                     {v.attestationAddress && v.state === "issued" && !v.revokedAt && <a href={`https://explorer.solana.com/address/${v.attestationAddress}${cluster}`} target="_blank" rel="noreferrer" className={`text-ink ${link}`}>{t.onChain}</a>}
                   </td>
                   <td className="py-3 whitespace-nowrap">
-                    {v.state === "issued" && <a href={`/api/pdf/${v.verificationCode}`} className="bg-magenta px-3 pt-1.5 pb-1 font-display text-lg text-white hover:bg-magenta-deep">PDF</a>}
+                    {canPdf && v.state === "issued" && <a href={`/api/pdf/${v.verificationCode}`} className="bg-magenta px-3 pt-1.5 pb-1 font-display text-lg text-white hover:bg-magenta-deep">PDF</a>}
                   </td>
                 </tr>
               ))}

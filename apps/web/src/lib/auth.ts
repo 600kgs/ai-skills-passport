@@ -1,8 +1,10 @@
 import "server-only";
 import { headers } from "next/headers";
-import { BTU_DOMAIN, isAdmin, isBtuAccount } from "@passport/core";
+import { BTU_DOMAIN, isBtuAccount, resolveRole, type Role, roleAtLeast } from "@passport/core";
+import { getStaffRole } from "@passport/ledger";
 import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
+import { getDb } from "@/lib/db";
 
 // no database: the session is an encrypted cookie. we only need to know who is signed in,
 // and the passport data is looked up by email. sign-out or expiry ends it.
@@ -31,19 +33,22 @@ function createAuth() {
 const g = globalThis as unknown as { passportAuth?: ReturnType<typeof createAuth> };
 export const getAuth = () => (g.passportAuth ??= createAuth());
 
-export type Student = { email: string; name: string; isAdmin: boolean };
+// role = staff role, null for students. read from the database on every request (never kept in the cookie),
+// so a role change applies at once
+export type Viewer = { email: string; name: string; role: Role | null };
 
 // the signed-in btu account, or null for anyone else
-export async function currentUser(): Promise<Student | null> {
+export async function currentUser(): Promise<Viewer | null> {
   // read the request first: during the build this is where the page stops prerendering
   const requestHeaders = await headers();
   const session = await getAuth().api.getSession({ headers: requestHeaders });
   if (!session || !isBtuAccount(session.user)) return null;
-  return { email: session.user.email, name: session.user.name, isAdmin: isAdmin(session.user, process.env.ADMIN_EMAILS) };
+  const stored = await getStaffRole(getDb(), session.user.email);
+  return { email: session.user.email, name: session.user.name, role: resolveRole(session.user, stored, process.env.ADMIN_EMAILS) };
 }
 
 // every admin page and action calls this itself; nothing relies on a layout or link being hidden
-export async function currentAdmin(): Promise<Student | null> {
+export async function currentStaff(min: Role): Promise<Viewer | null> {
   const user = await currentUser();
-  return user?.isAdmin ? user : null;
+  return user && roleAtLeast(user.role, min) ? user : null;
 }

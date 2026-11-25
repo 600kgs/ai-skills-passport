@@ -174,6 +174,9 @@ importers:
       '@passport/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@passport/ledger':
+        specifier: workspace:*
+        version: link:../../packages/ledger
       better-auth:
         specifier: 1.7.12
         version: 1.7.12(@opentelemetry/api@1.9.1)(drizzle-kit@0.31.11)(drizzle-orm@0.45.4(@opentelemetry/api@1.9.1)(@types/pg@8.23.1)(kysely@0.29.7)(pg@8.23.1))(next@16.4.2(@babel/core@7.29.7(supports-color@7.2.0))(@opentelemetry/api@1.9.1)(@types/node@24.19.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(pg@8.23.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.5(@opentelemetry/api@1.9.1)(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))
@@ -241,6 +244,9 @@ importers:
       '@passport/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@passport/ledger':
+        specifier: workspace:*
+        version: link:../../packages/ledger
       '@solana/kit':
         specifier: ^5.5.1
         version: 5.5.1(typescript@7.0.2)
@@ -316,6 +322,31 @@ importers:
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
+
+  packages/ledger:
+    dependencies:
+      '@passport/core':
+        specifier: workspace:*
+        version: link:../core
+      '@passport/db':
+        specifier: workspace:*
+        version: link:../db
+    devDependencies:
+      '@types/node':
+        specifier: ^24.19.2
+        version: 24.19.2
+      '@types/pg':
+        specifier: ^8.23.1
+        version: 8.23.1
+      pg:
+        specifier: ^8.23.1
+        version: 8.23.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@opentelemetry/api@1.9.1)(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
 
 packages:
 

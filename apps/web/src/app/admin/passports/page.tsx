@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { type PassportFilters, passportFilters, type PassportSort, queryString } from "@passport/core";
+import { type PassportFilters, passportFilters, type PassportSort, queryString, roleAtLeast } from "@passport/core";
 import { fill, formatDate } from "@/i18n/format";
 import { getDict } from "@/i18n/server";
 import { listPassports, passportFilterOptions } from "@/lib/admin";
-import { requireAdmin } from "../guard";
+import { requireRole } from "../guard";
 
 const link = "underline decoration-magenta decoration-2 underline-offset-2 hover:text-magenta";
 const field = "h-12 min-w-0 border-2 border-line bg-white px-3 text-lg text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-magenta";
@@ -15,7 +15,7 @@ const href = (f: PassportFilters, change: Partial<PassportFilters>) => {
 };
 
 export default async function AdminPassportsPage({ searchParams }: PageProps<"/admin/passports">) {
-  await requireAdmin();
+  const canPdf = roleAtLeast((await requireRole("viewer")).role, "admin");
   const f = passportFilters(await searchParams);
   const [d, { rows, total, pages, page }, options] = await Promise.all([getDict(), listPassports(f), passportFilterOptions()]);
   const t = d.admin.passports;
@@ -97,7 +97,7 @@ export default async function AdminPassportsPage({ searchParams }: PageProps<"/a
                       <td className="py-3 pr-4 whitespace-nowrap"><Link href={`/v/${p.code}`} className={`font-semibold tracking-wider text-ink ${link}`}>{p.code}</Link></td>
                       <td className="py-3 pr-4 whitespace-nowrap">{p.issuedAt && formatDate(d.locale, p.issuedAt)}</td>
                       <td className="py-3 pr-4">{p.skillCount}</td>
-                      <td className="py-3 whitespace-nowrap"><a href={`/api/pdf/${p.code}`} className="bg-magenta px-3 pt-1.5 pb-1 font-display text-lg text-white hover:bg-magenta-deep">PDF</a></td>
+                      <td className="py-3 whitespace-nowrap">{canPdf && <a href={`/api/pdf/${p.code}`} className="bg-magenta px-3 pt-1.5 pb-1 font-display text-lg text-white hover:bg-magenta-deep">PDF</a>}</td>
                     </>
                   ) : (
                     <td colSpan={5} className="py-3 text-muted">{fill(t.notIssued, { date: formatDate(d.locale, p.firstIssued) })}</td>

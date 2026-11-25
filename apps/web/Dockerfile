@@ -8,10 +8,12 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json apps/web/
 COPY packages/core/package.json packages/core/
 COPY packages/db/package.json packages/db/
+COPY packages/ledger/package.json packages/ledger/
 RUN pnpm install --frozen-lockfile --filter "@passport/web..."
 COPY tsconfig.base.json ./
 COPY packages/core packages/core
 COPY packages/db packages/db
+COPY packages/ledger packages/ledger
 COPY apps/web apps/web
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm --filter @passport/web build

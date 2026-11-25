@@ -102,6 +102,17 @@ export const auditLog = pgTable("audit_log", {
   details: jsonb("details"),
 });
 
+// btu staff who may use the admin pages, by role. ADMIN_EMAILS from the server config are superadmins on top of these
+export const staffRole = pgEnum("staff_role", ["viewer", "editor", "admin", "superadmin"]);
+
+export const staff = pgTable("staff", {
+  email: text("email").primaryKey(), // lowercased
+  role: staffRole("role").notNull(),
+  addedBy: text("added_by").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // one permanent public link per student skill, for linkedin. the code is random like a version code,
 // so links can't be walked the way sequential passport and skill ids could
 export const skillLinks = pgTable("skill_links", {

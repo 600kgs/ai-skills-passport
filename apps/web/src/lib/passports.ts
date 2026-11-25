@@ -1,7 +1,7 @@
 import "server-only";
 import { readFile } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
-import { sameEmail, sha256, toHex } from "@passport/core";
+import { type Role, roleAtLeast, sameEmail, sha256, toHex } from "@passport/core";
 import { and, eq, passports, passportVersions, sql, students } from "@passport/db";
 import { inArray, skillAwards } from "@passport/db";
 import { getDb } from "@/lib/db";
@@ -43,13 +43,13 @@ const storageDir = () => {
 
 // the stored pdf for a code, only if it belongs to this email (admins may open any). null covers
 // "no such code" and "not yours" alike, so codes can't be probed for ownership
-export async function pdfFor(code: string, user: { email: string; isAdmin: boolean }): Promise<{ bytes: Uint8Array<ArrayBuffer>; name: string } | null> {
+export async function pdfFor(code: string, user: { email: string; role: Role | null }): Promise<{ bytes: Uint8Array<ArrayBuffer>; name: string } | null> {
   const [row] = await getDb().select({ version: passportVersions, student: students })
     .from(passportVersions)
     .innerJoin(passports, eq(passports.passportId, passportVersions.passportId))
     .innerJoin(students, eq(students.studentId, passports.studentId))
     .where(and(eq(passportVersions.verificationCode, code), eq(passportVersions.state, "issued")));
-  if (!row || !(user.isAdmin || sameEmail(row.student.email, user.email)) || !row.version.pdfSha256) return null;
+  if (!row || !(roleAtLeast(user.role, "admin") || sameEmail(row.student.email, user.email)) || !row.version.pdfSha256) return null;
 
   // stored under its own hash; serve it only if it still is that file, byte for byte
   const bytes = new Uint8Array(await readFile(join(storageDir(), "pdfs", `${row.version.pdfSha256}.pdf`)));

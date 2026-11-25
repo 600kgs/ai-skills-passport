@@ -3,16 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-type Labels = { overview: string; passports: string; upload: string; activity: string };
-
-export function AdminNav({ labels, label }: { labels: Labels; label: string }) {
+// the server picks the links the signed-in role may open
+export function AdminNav({ links, label }: { links: { href: string; label: string }[]; label: string }) {
   const path = usePathname();
-  const links = [
-    { href: "/admin", label: labels.overview },
-    { href: "/admin/passports", label: labels.passports },
-    { href: "/admin/upload", label: labels.upload },
-    { href: "/admin/activity", label: labels.activity },
-  ];
   return (
     <nav aria-label={label} className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
       <ul className="flex gap-1">

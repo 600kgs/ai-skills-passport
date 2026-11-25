@@ -1,14 +1,15 @@
 import Link from "next/link";
+import { roleAtLeast } from "@passport/core";
 import { fill, formatAgo, formatDate } from "@/i18n/format";
 import { getDict } from "@/i18n/server";
 import { overview, pendingRecords, removedRecords } from "@/lib/admin";
 import { DecisionButtons, SyncButton } from "./buttons";
-import { requireAdmin } from "./guard";
+import { requireRole } from "./guard";
 
 const LOW_BALANCE_ISSUES = 20;
 
 export default async function AdminOverviewPage() {
-  await requireAdmin();
+  const canDecide = roleAtLeast((await requireRole("viewer")).role, "admin");
   const [d, o, pending, removed] = await Promise.all([getDict(), overview(), pendingRecords(), removedRecords()]);
   const t = d.admin.overview;
   const { counts, lastRun, issuer } = o;
@@ -28,7 +29,7 @@ export default async function AdminOverviewPage() {
               </div>
             ))}
           </dl>
-          <SyncButton />
+          {canDecide && <SyncButton />}
         </div>
         <div className="mt-8 space-y-2 border-l-8 border-blue bg-panel p-5">
           {counts.failed > 0 && <p className="font-semibold text-ink">{fill(t.failed, { n: counts.failed })}</p>}
@@ -64,7 +65,7 @@ export default async function AdminOverviewPage() {
                       {r.firstName} {r.lastName}, {r.passportId ?? r.studentId}. {fill(t.earned, { date: formatDate(d.locale, r.dateEarned), rec: r.recordId })}
                     </p>
                   </div>
-                  <DecisionButtons recordId={r.recordId} label={`${r.skillName}, ${r.firstName} ${r.lastName}`} />
+                  {canDecide && <DecisionButtons recordId={r.recordId} label={`${r.skillName}, ${r.firstName} ${r.lastName}`} />}
                 </li>
               ))}
             </ul>

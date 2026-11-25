@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   outputFileTracingRoot: fileURLToPath(new URL("../../", import.meta.url)),
   // workspace packages ship as typescript source
-  transpilePackages: ["@passport/core", "@passport/db"],
+  transpilePackages: ["@passport/core", "@passport/db", "@passport/ledger"],
   serverExternalPackages: ["pg", "pg-boss"],
   experimental: {
     // forbidden() for signed-in accounts that aren't admins

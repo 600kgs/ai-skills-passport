@@ -1,9 +1,9 @@
 // the empty upload template: the sheet's input columns, nothing else
-import { currentAdmin } from "@/lib/auth";
+import { currentStaff } from "@/lib/auth";
 import { uploadTemplate } from "@/lib/xlsx";
 
 export async function GET() {
-  if (!(await currentAdmin())) return Response.json({ error: "admins only" }, { status: 403 });
+  if (!(await currentStaff("admin"))) return Response.json({ error: "admins only" }, { status: 403 });
   return new Response(new Uint8Array(await uploadTemplate()), {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

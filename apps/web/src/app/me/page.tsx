@@ -36,7 +36,7 @@ export default async function MePage() {
       <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-muted">
         <span>{m.signedInAs} <b className="text-ink">{user.email}</b></span>
         <SignOutButton />
-        {user.isAdmin && <Link href="/admin" className={link}>{m.openAdmin}</Link>}
+        {user.role && <Link href="/admin" className={link}>{m.openAdmin}</Link>}
       </p>
 
       {!passport ? (

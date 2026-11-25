@@ -3,7 +3,7 @@
 import type { SyncResult } from "@passport/core";
 import { fill } from "@/i18n/format";
 import { getDict } from "@/i18n/server";
-import { currentAdmin } from "@/lib/auth";
+import { currentStaff } from "@/lib/auth";
 import { runAdminJob, type JobOutcome } from "@/lib/queue";
 
 export type ActionResult = { ok: boolean; message: string };
@@ -11,7 +11,7 @@ export type ActionResult = { ok: boolean; message: string };
 // server actions are public endpoints, so each one checks the admin itself
 export async function decideRecord(recordId: string, status: "CONFIRMED" | "REJECTED"): Promise<ActionResult> {
   const t = (await getDict()).admin.actions;
-  const admin = await currentAdmin();
+  const admin = await currentStaff("admin");
   if (!admin) return { ok: false, message: t.onlyAdmins };
   if (!/^REC-\d+$/.test(recordId) || !["CONFIRMED", "REJECTED"].includes(status)) return { ok: false, message: t.invalid };
 
@@ -24,7 +24,7 @@ export async function decideRecord(recordId: string, status: "CONFIRMED" | "REJE
 export async function syncNow(): Promise<ActionResult> {
   const d = await getDict();
   const t = d.admin.actions;
-  const admin = await currentAdmin();
+  const admin = await currentStaff("admin");
   if (!admin) return { ok: false, message: t.onlyAdmins };
   const outcome = await runAdminJob<SyncResult>({ kind: "sync", by: admin.email });
   if (outcome.state !== "done") return notDone(outcome, t);

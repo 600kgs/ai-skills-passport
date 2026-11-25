@@ -3,7 +3,7 @@ import { type ActivityFilters, activityFilters, queryString } from "@passport/co
 import { fill, formatDateTime } from "@/i18n/format";
 import { getDict } from "@/i18n/server";
 import { activityPage, loggedVersion } from "@/lib/admin";
-import { requireAdmin } from "../guard";
+import { requireRole } from "../guard";
 
 const link = "underline decoration-magenta decoration-2 underline-offset-2 hover:text-magenta";
 const field = "h-12 min-w-0 border-2 border-line bg-white px-3 text-lg text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-magenta";
@@ -15,7 +15,7 @@ const href = (f: ActivityFilters, change: Partial<ActivityFilters>) => {
 };
 
 export default async function AdminActivityPage({ searchParams }: PageProps<"/admin/activity">) {
-  await requireAdmin();
+  await requireRole("viewer");
   const f = activityFilters(await searchParams);
   const [d, { audit, olderAudit, runs, olderRuns, passportIds }] = await Promise.all([getDict(), activityPage(f)]);
   const t = d.admin.activity;

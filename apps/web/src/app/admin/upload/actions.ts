@@ -3,7 +3,7 @@
 import { type ImportPreview, type ImportResult, UPLOAD_MAX_BYTES } from "@passport/core";
 import { fill } from "@/i18n/format";
 import { getDict } from "@/i18n/server";
-import { currentAdmin } from "@/lib/auth";
+import { currentStaff } from "@/lib/auth";
 import { runAdminJob } from "@/lib/queue";
 import { readUpload } from "@/lib/xlsx";
 
@@ -28,7 +28,7 @@ async function gridFrom(form: FormData, t: Texts): Promise<{ grid: string[][]; n
 export async function previewUpload(form: FormData): Promise<PreviewState> {
   const d = await getDict();
   const t = d.admin.upload;
-  const admin = await currentAdmin();
+  const admin = await currentStaff("admin");
   if (!admin) return { ok: false, message: d.admin.actions.onlyAdmins };
   const read = await gridFrom(form, t);
   if (typeof read === "string") return { ok: false, message: read };
@@ -41,7 +41,7 @@ export async function previewUpload(form: FormData): Promise<PreviewState> {
 export async function applyUpload(form: FormData): Promise<ApplyState> {
   const d = await getDict();
   const t = d.admin.upload;
-  const admin = await currentAdmin();
+  const admin = await currentStaff("admin");
   if (!admin) return { ok: false, message: d.admin.actions.onlyAdmins };
   const read = await gridFrom(form, t);
   if (typeof read === "string") return { ok: false, message: read };

@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { CountUp } from "@/components/count-up";
 import { StickerCluster } from "@/components/sticker-cluster";
+import { UpcomingWorkshops } from "@/components/upcoming-workshops";
 import { getDict } from "@/i18n/server";
 import { currentUser } from "@/lib/auth";
 import { publicStats } from "@/lib/stats";
@@ -51,6 +53,10 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      <Suspense fallback={null}>
+        <UpcomingWorkshops />
+      </Suspense>
 
       <section aria-labelledby="students-h" className="mx-auto grid max-w-6xl px-4 py-16 sm:py-24 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         <div className="flex flex-col items-start justify-between gap-8 bg-magenta p-8 text-white">

@@ -37,7 +37,7 @@ export async function SiteHeader() {
             <span className="block">AI Skills</span>
             <span className="block">Digital Passport</span>
           </Link>
-          <SiteNav labels={{ verify: t.nav.verify, howItWorks: t.nav.howItWorks, main: t.nav.main }} />
+          <SiteNav labels={{ verify: t.nav.verify, howItWorks: t.nav.howItWorks, workshops: t.nav.workshops, main: t.nav.main }} />
         </div>
       </div>
     </header>

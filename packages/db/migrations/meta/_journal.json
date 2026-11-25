@@ -71,6 +71,13 @@
       "when": 1795648733158,
       "tag": "0009_award_source",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795649772191,
+      "tag": "0010_workshops",
+      "breakpoints": true
     }
   ]
 }

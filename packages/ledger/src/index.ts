@@ -4,3 +4,4 @@ export * from "./skills.ts";
 export * from "./queries.ts";
 export * from "./records.ts";
 export * from "./students.ts";
+export * from "./workshops.ts";

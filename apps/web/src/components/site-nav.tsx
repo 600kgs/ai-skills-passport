@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export function SiteNav({ labels }: { labels: { verify: string; howItWorks: string; main: string } }) {
+export function SiteNav({ labels }: { labels: { verify: string; howItWorks: string; workshops: string; main: string } }) {
   const path = usePathname();
   const links = [
     { href: "/", label: labels.verify, current: path === "/" || path.startsWith("/v/") },
     { href: "/#how", label: labels.howItWorks, current: false },
+    { href: "/workshops", label: labels.workshops, current: path === "/workshops" },
   ];
   return (
     <nav aria-label={labels.main} className="ml-auto hidden sm:block">

@@ -10,3 +10,4 @@ export * from "./hash.ts";
 export * from "./share.ts";
 export * from "./upload.ts";
 export * from "./verdict.ts";
+export * from "./workshops.ts";

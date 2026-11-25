@@ -74,6 +74,7 @@ export function recordFilters(p: Params): RecordFilters {
 export const ACTIVITY_TYPES = {
   records: ["record_created", "record_updated", "record_deleted", "record_confirmed", "record_rejected", "rows_imported", "student_updated", "record_withdrawn"],
   issued: ["passport_created", "version_issued", "version_revoked", "ledger_reset"],
+  workshops: ["workshop_created", "workshop_updated", "workshop_published", "workshop_unpublished", "workshop_cancelled", "registrations_uploaded", "workshop_records_created"],
   staff: ["staff_added", "staff_role_changed", "staff_removed", "skill_added", "skill_updated"],
   email: ["student_notified"],
 } as const;

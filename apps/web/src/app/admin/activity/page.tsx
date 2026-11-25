@@ -38,6 +38,7 @@ export default async function AdminActivityPage({ searchParams }: PageProps<"/ad
               <option value="">{t.types.all}</option>
               <option value="records">{t.types.records}</option>
               <option value="issued">{t.types.issued}</option>
+              <option value="workshops">{t.types.workshops}</option>
               <option value="staff">{t.types.staff}</option>
               <option value="email">{t.types.email}</option>
             </select>

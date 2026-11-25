@@ -1,7 +1,7 @@
 // the issuance ledger. rows here are the source of truth for what was issued;
 // the google sheet is only the input, and the chain only holds hashes.
 import { sql } from "drizzle-orm";
-import { boolean, check, date, index, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { type AnyPgColumn, boolean, check, date, index, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 // deleted = removed by staff before issue; withdrawn = taken out by a revoke because it was a mistake. issue skips both
 export const awardState = pgEnum("award_state", ["pending", "applied", "failed", "ignored", "conflict", "deleted", "withdrawn"]);
@@ -46,7 +46,7 @@ export const skillAwards = pgTable("skill_awards", {
   appliedInVersionId: integer("applied_in_version_id"),
   // where the record came from, who made it and who confirmed or rejected it
   source: text("source").notNull().default("sheet"),
-  workshopId: integer("workshop_id"),
+  workshopId: integer("workshop_id").references((): AnyPgColumn => workshops.id),
   createdBy: text("created_by"),
   decidedBy: text("decided_by"),
   decidedAt: timestamp("decided_at", { withTimezone: true }),
@@ -123,6 +123,48 @@ export const skills = pgTable("skills", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// workshops and hackathons staff list on the public site. times are stored as instants and shown in tbilisi time
+export const workshops = pgTable("workshops", {
+  id: serial("id").primaryKey(),
+  kind: text("kind").notNull(),
+  title: text("title").notNull(),
+  titleEn: text("title_en"),
+  description: text("description").notNull(),
+  descriptionEn: text("description_en"),
+  trainer: text("trainer").notNull(),
+  startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+  endsAt: timestamp("ends_at", { withTimezone: true }),
+  location: text("location").notNull(),
+  // the badge it gives; null for an event without one
+  skillId: text("skill_id").references(() => skills.skillId),
+  registrationUrl: text("registration_url").notNull(),
+  status: text("status").notNull().default("draft"),
+  createdBy: text("created_by").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  check("workshops_kind", sql`${t.kind} in ('workshop', 'hackathon')`),
+  check("workshops_status", sql`${t.status} in ('draft', 'published', 'cancelled')`),
+  index("workshops_starts_idx").on(t.startsAt),
+]);
+
+// who registered for a workshop, from the outside form's export; passed is ticked by staff afterwards
+export const workshopRegistrations = pgTable("workshop_registrations", {
+  id: serial("id").primaryKey(),
+  workshopId: integer("workshop_id").notNull().references(() => workshops.id),
+  email: text("email").notNull(), // lowercased
+  studentId: text("student_id").notNull(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  program: text("program").notNull(),
+  educationLevel: text("education_level").notNull(),
+  passed: boolean("passed").notNull().default(false),
+  // the skill record made for this student, once staff created records for the ticked rows
+  recordId: text("record_id"),
+  uploadedBy: text("uploaded_by").notNull(),
+  uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [uniqueIndex("workshop_registrations_email_idx").on(t.workshopId, t.email)]);
 
 // btu staff who may use the admin pages, by role. ADMIN_EMAILS from the server config are superadmins on top of these
 export const staffRole = pgEnum("staff_role", ["viewer", "editor", "admin", "superadmin"]);

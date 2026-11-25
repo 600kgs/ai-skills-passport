@@ -29,3 +29,11 @@ export function formatAgo(locale: Locale, d: Date, now = Date.now()) {
 // fills "{name}" placeholders in a dictionary text
 export const fill = (text: string, vars: Record<string, string | number>) =>
   text.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m));
+
+// the parts of an event's start a date block needs, in tbilisi time: "25", "November"/"ნოემბერი", "2026", "11:00"
+export function eventParts(locale: Locale, d: Date) {
+  const [year, month, day] = d.toLocaleDateString("en-CA", { timeZone: "Asia/Tbilisi" }).split("-").map(Number);
+  const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Tbilisi" });
+  const monthName = locale === "ka" ? KA_MONTHS[month! - 1]! : d.toLocaleDateString("en-GB", { month: "long", timeZone: "Asia/Tbilisi" });
+  return { day: day!, month: monthName, year: year!, time };
+}

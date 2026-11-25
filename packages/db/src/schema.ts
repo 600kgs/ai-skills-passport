@@ -1,7 +1,7 @@
 // the issuance ledger. rows here are the source of truth for what was issued;
 // the google sheet is only the input, and the chain only holds hashes.
 import { sql } from "drizzle-orm";
-import { check, date, index, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, check, date, index, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const awardState = pgEnum("award_state", ["pending", "applied", "failed", "ignored", "conflict"]);
 export const versionState = pgEnum("version_state", ["rendering", "anchoring", "issued", "failed"]);
@@ -100,6 +100,18 @@ export const auditLog = pgTable("audit_log", {
   action: text("action").notNull(),
   subject: text("subject"),
   details: jsonb("details"),
+});
+
+// the skills staff can award. an award copies the texts when it is made, so editing a skill here
+// never changes a record or an issued passport
+export const skills = pgTable("skills", {
+  skillId: text("skill_id").primaryKey(),
+  name: text("name").notNull(),
+  category: text("category").notNull(),
+  description: text("description").notNull(),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 // btu staff who may use the admin pages, by role. ADMIN_EMAILS from the server config are superadmins on top of these

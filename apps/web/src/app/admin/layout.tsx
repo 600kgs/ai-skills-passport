@@ -7,11 +7,12 @@ import { AdminNav } from "./nav";
 
 export const metadata: Metadata = { title: "Admin | BTU AI Skills Digital Passport", robots: { index: false } };
 
-type Tab = "overview" | "passports" | "upload" | "activity" | "people";
+type Tab = "overview" | "passports" | "skills" | "upload" | "activity" | "people";
 // each tab with the lowest role that may open it; the pages check the role again themselves
 const TABS: [Tab, string, Role][] = [
   ["overview", "/admin", "viewer"],
   ["passports", "/admin/passports", "viewer"],
+  ["skills", "/admin/skills", "viewer"],
   ["upload", "/admin/upload", "admin"],
   ["activity", "/admin/activity", "viewer"],
   ["people", "/admin/people", "superadmin"],

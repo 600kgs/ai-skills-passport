@@ -50,6 +50,13 @@
       "when": 1795648295965,
       "tag": "0006_staff",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795648578330,
+      "tag": "0007_skills",
+      "breakpoints": true
     }
   ]
 }

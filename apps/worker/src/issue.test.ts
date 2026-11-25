@@ -42,6 +42,7 @@ class FakeChain implements Chain {
     return found;
   }
   async find(code: string) { return this.records.get(code) ?? null; }
+  async close(code: string) { return this.records.delete(code); }
 }
 
 const memoryStore = (): PdfStore & { files: Map<string, Uint8Array> } => {
@@ -96,6 +97,16 @@ describe("issue job", () => {
     expect(renders[0]!.skills.map((s) => s.name)).toEqual(["AI Literacy", "AI Workflow Automation"]); // by date earned
     expect(renders[0]!.verifyUrl).toBe(`https://passport.example/v/${v!.verificationCode}`);
     expect((await db.select().from(skillAwards)).every((a) => a.state === "applied" && a.appliedInVersionId === v!.id)).toBe(true);
+  });
+
+  it("never puts a withdrawn or deleted record in a new version", async () => {
+    await seed(["REC-0001", "AI Literacy", "2026-09-18"], ["REC-0002", "Mistake", "2026-09-19"], ["REC-0003", "Deleted", "2026-09-20"]);
+    await db.update(skillAwards).set({ state: "withdrawn" }).where(eq(skillAwards.recordId, "REC-0002"));
+    await db.update(skillAwards).set({ state: "deleted" }).where(eq(skillAwards.recordId, "REC-0003"));
+    expect((await issue()).status).toBe("issued");
+    const [v] = await versions();
+    expect(v!.includedRecordIds).toEqual(["REC-0001"]);
+    expect(renders[0]!.skills.map((s) => s.name)).toEqual(["AI Literacy"]);
   });
 
   it("does nothing when no skill is pending", async () => {

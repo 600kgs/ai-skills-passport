@@ -2,15 +2,16 @@
 // marked revoked (the verify page then says so, with the reason), and its chain record is closed,
 // so even a check that never reaches our server stops finding it. the student's other versions are untouched.
 // run where the database is (on the server, in the worker container):
-//   docker compose run --rm worker node --import tsx scripts/revoke.ts <code> --reason "..."         (dry run)
-//   docker compose run --rm worker node --import tsx scripts/revoke.ts <code> --reason "..." --yes
+//   docker compose -f docker-compose.prod.yml run --rm worker node --import tsx scripts/revoke.ts <code> --reason "..."         (dry run)
+//   docker compose -f docker-compose.prod.yml run --rm worker node --import tsx scripts/revoke.ts <code> --reason "..." --yes
+// --withdraw REC-0123,REC-0124 also withdraws the skills that were the mistake (only ones first added in that version);
+// a superadmin can do the same from the passport's admin page
 // running it again on a revoked version only closes the chain record if that step failed before
 import { fileURLToPath } from "node:url";
 import { findRecord, normalizeCode } from "@passport/core";
-import { and, auditLog, createDb, eq, isNull, passports, passportVersions, sql } from "@passport/db";
-import { address } from "@solana/kit";
-import { getCloseAttestationInstruction } from "sas-lib";
-import { credentialAddresses, loadSigner, txTools } from "../src/chain.ts";
+import { createDb, eq, passportVersions } from "@passport/db";
+import { solanaChain } from "../src/chain.ts";
+import { revokeVersion } from "../src/revoke.ts";
 
 const root = (p: string) => fileURLToPath(new URL(`../../../${p}`, import.meta.url));
 try {
@@ -34,6 +35,7 @@ if (!reason) throw new Error("--reason is required: it is shown on the verify pa
 
 const authority = env("AUTHORITY_ADDRESS");
 const rpcUrl = env("SOLANA_RPC_URL");
+const withdraw = (arg("--withdraw") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 const { db, pool } = createDb(env("DATABASE_URL"));
 try {
   const [version] = await db.select().from(passportVersions).where(eq(passportVersions.verificationCode, code));
@@ -42,42 +44,19 @@ try {
   console.log(`${version.passportId} V${version.versionNo} (${code}), ${version.skillCount} skills, issued ${version.issuedAt!.toISOString()}`);
   console.log(`ledger: ${version.revokedAt ? `already revoked ${version.revokedAt.toISOString()}: ${version.revokeReason}` : "valid"}`);
   console.log(`chain:  ${record ? `open at ${record.address}` : "no open record"}`);
+  if (withdraw.length) console.log(`withdraw: ${withdraw.join(", ")}`);
 
   if (!confirmed) {
-    console.log(`\ndry run. add --yes to revoke it with the reason "${reason}"`);
+    console.log(`
+dry run. add --yes to revoke it with the reason "${reason}"`);
   } else {
-    // 1. the ledger first: from here the verify page shows it as revoked, even if the chain step fails
-    if (!version.revokedAt) {
-      await db.transaction(async (tx) => {
-        await tx.execute(sql`select 1 from passports where passport_id = ${version.passportId} for update`);
-        await tx.update(passportVersions).set({ revokedAt: new Date(), revokeReason: reason })
-          .where(and(eq(passportVersions.id, version.id), isNull(passportVersions.revokedAt)));
-        // the passport's latest is now its newest version that still stands, or none
-        const [latest] = await tx.select({ id: passportVersions.id }).from(passportVersions)
-          .where(and(eq(passportVersions.passportId, version.passportId), eq(passportVersions.state, "issued"), isNull(passportVersions.revokedAt)))
-          .orderBy(sql`${passportVersions.versionNo} desc`).limit(1);
-        await tx.update(passports).set({ latestVersionId: latest?.id ?? null }).where(eq(passports.passportId, version.passportId));
-        await tx.insert(auditLog).values({
-          actor: "system", action: "version_revoked", subject: version.passportId,
-          details: { versionNo: version.versionNo, code, reason },
-        });
-      });
-      console.log("\n1. revoked in the ledger");
-    } else {
-      console.log("\n1. already revoked in the ledger");
-    }
-
-    // 2. close the chain record; its rent goes back to the issuer
-    if (record) {
-      const issuer = await loadSigner(env("ISSUER_KEY_FILE"));
-      const { credential } = await credentialAddresses(address(authority));
-      const sig = await txTools(rpcUrl).send([getCloseAttestationInstruction({
-        payer: issuer, authority: issuer, credential, attestation: address(record.address),
-      })], issuer);
-      console.log(`2. closed the chain record  ${sig}`);
-    } else {
-      console.log("2. chain record already closed");
-    }
+    const chain = await solanaChain({ rpcUrl, wsUrl: env("SOLANA_WS_URL"), issuerKeyFile: env("ISSUER_KEY_FILE"), authorityAddress: authority });
+    const r = await revokeVersion(db, chain, { code, reason, withdraw, by: "script" });
+    console.log(`
+revoked in the ledger; chain record ${r.chainClosed ? "closed" : "already closed"}`);
+    if (r.withdrawn.length) console.log(`withdrawn: ${r.withdrawn.join(", ")}`);
+    // the worker's sweep issues the corrected version within a minute
+    if (r.reissue) console.log("the remaining skills go back to waiting; the worker issues a corrected version");
   }
 } finally {
   await pool.end();

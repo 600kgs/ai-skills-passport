@@ -9,7 +9,7 @@ import {
 } from "@solana/kit";
 import {
   deriveAttestationPda, deserializeAttestationData, fetchMaybeAttestation,
-  fetchSchema, getCreateAttestationInstruction, serializeAttestationData, type Schema,
+  fetchSchema, getCloseAttestationInstruction, getCreateAttestationInstruction, serializeAttestationData, type Schema,
 } from "sas-lib";
 import { issuerAddresses, nonceFromCode, type AttestationData } from "@passport/core";
 
@@ -19,6 +19,8 @@ export type Found = Anchored & { pdfSha256: Uint8Array; version: number };
 export interface Chain {
   attest(input: { code: string; pdfSha256: Uint8Array; version: number }): Promise<Anchored>;
   find(code: string): Promise<Found | null>;
+  // closes a version's record (a revoke); false when it was already gone
+  close(code: string): Promise<boolean>;
 }
 
 export async function loadSigner(keyFile: string): Promise<KeyPairSigner> {
@@ -107,6 +109,15 @@ export async function solanaChain(cfg: { rpcUrl: string; wsUrl: string; issuerKe
       const tx = await signTransactionMessageWithSigners(message);
       await sendAndConfirm(tx as Parameters<typeof sendAndConfirm>[0], { commitment: "confirmed" });
       return { address: pda, signature: getSignatureFromTransaction(tx), signer: issuer.address };
+    },
+
+    async close(code) {
+      const { pda } = await pdaFor(code);
+      const acct = await fetchMaybeAttestation(rpc, pda, { commitment: "confirmed" });
+      if (!acct.exists) return false;
+      // http polling confirms more reliably than devnet's websocket, as the scripts found
+      await txTools(cfg.rpcUrl).send([getCloseAttestationInstruction({ payer: issuer, authority: issuer, credential, attestation: pda })], issuer);
+      return true;
     },
 
     async find(code) {

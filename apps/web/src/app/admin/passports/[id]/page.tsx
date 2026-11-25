@@ -5,18 +5,28 @@ import { fill, formatDate, formatDateTime } from "@/i18n/format";
 import { getDict } from "@/i18n/server";
 import { loggedVersion, passportDetail } from "@/lib/admin";
 import { requireRole } from "../../guard";
+import { RetryVersion, RevokeVersion } from "./version-actions";
 
 const link = "underline decoration-magenta decoration-2 underline-offset-2 hover:text-magenta";
 const th = "py-2 pr-4 font-display text-xl font-normal text-blue";
 
 export default async function AdminPassportPage({ params }: PageProps<"/admin/passports/[id]">) {
   // viewers see the record, only admins may open a student's pdf
-  const canPdf = roleAtLeast((await requireRole("viewer")).role, "admin");
+  const role = (await requireRole("viewer")).role;
+  const canPdf = roleAtLeast(role, "admin");
+  const isSuper = roleAtLeast(role, "superadmin");
   const [d, p] = await Promise.all([getDict(), passportDetail((await params).id)]);
   if (!p) notFound();
   const t = d.admin.passport;
   const actions = d.admin.activity.actions as Record<string, string>;
   const cluster = process.env.SOLANA_RPC_URL?.includes("devnet") ? "?cluster=devnet" : "";
+
+  // the skills each version added, for the revoke dialog
+  const nameOf = new Map(p.records.map((r) => [r.recordId, r.skillName]));
+  const added = (v: (typeof p.versions)[number]) => {
+    const before = new Set(p.versions.filter((x) => x.versionNo < v.versionNo).flatMap((x) => x.includedRecordIds));
+    return v.includedRecordIds.filter((id) => !before.has(id)).map((id) => ({ recordId: id, name: nameOf.get(id) ?? id }));
+  };
 
   const recordStatus = (r: (typeof p.records)[number]) => {
     if (r.state !== "applied" && r.error === REMOVED_FROM_SHEET) return t.recordStates.removed;
@@ -81,7 +91,11 @@ export default async function AdminPassportPage({ params }: PageProps<"/admin/pa
                     {v.attestationAddress && v.state === "issued" && !v.revokedAt && <a href={`https://explorer.solana.com/address/${v.attestationAddress}${cluster}`} target="_blank" rel="noreferrer" className={`text-ink ${link}`}>{t.onChain}</a>}
                   </td>
                   <td className="py-3 whitespace-nowrap">
-                    {canPdf && v.state === "issued" && <a href={`/api/pdf/${v.verificationCode}`} className="bg-magenta px-3 pt-1.5 pb-1 font-display text-lg text-white hover:bg-magenta-deep">PDF</a>}
+                    <div className="flex flex-col items-start gap-2">
+                      {canPdf && v.state === "issued" && <a href={`/api/pdf/${v.verificationCode}`} className="bg-magenta px-3 pt-1.5 pb-1 font-display text-lg text-white hover:bg-magenta-deep">PDF</a>}
+                      {isSuper && v.state === "issued" && !v.revokedAt && <RevokeVersion code={v.verificationCode} versionNo={v.versionNo} newSkills={added(v)} />}
+                      {isSuper && v.state === "failed" && <RetryVersion passportId={p.passport.passportId} />}
+                    </div>
                   </td>
                 </tr>
               ))}

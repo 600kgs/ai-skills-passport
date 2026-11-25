@@ -1,6 +1,6 @@
 // background worker: applies db migrations, runs the job queue, and re-queues any confirmed skill still waiting.
 import { fileURLToPath } from "node:url";
-import { ISSUE_QUEUE } from "@passport/core";
+import { ADMIN_QUEUE, type AdminJob, ISSUE_QUEUE, type RevokeResult } from "@passport/core";
 import { auditLog, createDb } from "@passport/db";
 import { runMigrations } from "@passport/db/migrate";
 import { passportsWaitingToIssue } from "@passport/ledger";
@@ -9,6 +9,7 @@ import { solanaChain } from "./chain.ts";
 import { issuePassport, type IssueDeps } from "./issue.ts";
 import { brevoSender, loadNotice, renderMail, shouldEmail } from "./notify.ts";
 import { gotenbergRenderer } from "./pdf/render.ts";
+import { revokeVersion } from "./revoke.ts";
 import { fileStore } from "./storage.ts";
 
 const root = (p: string) => fileURLToPath(new URL(`../../../${p}`, import.meta.url));
@@ -87,6 +88,17 @@ async function sweep() {
 }
 void sweep();
 const timer = setInterval(() => void sweep(), SWEEP_EVERY_MS);
+
+// admin jobs need the issuer key, which only the worker holds. they fail fast instead of retrying:
+// the admin sees the reason and decides
+await boss.createQueue(ADMIN_QUEUE, { retryLimit: 0 });
+await boss.work<AdminJob>(ADMIN_QUEUE, { pollingIntervalSeconds: 1 }, async ([job]): Promise<RevokeResult> => {
+  const j = job!.data;
+  const r = await revokeVersion(db, deps.chain, { code: j.code, reason: j.reason, withdraw: j.withdraw, by: j.by });
+  console.log(`revoked ${r.passportId} V${r.versionNo} for ${j.by}${r.withdrawn.length ? `, withdrew ${r.withdrawn.join(", ")}` : ""}`);
+  if (r.reissue) await boss.send(ISSUE_QUEUE, { passportId: r.passportId }, { singletonKey: r.passportId });
+  return r;
+});
 
 async function shutdown() {
   clearInterval(timer);

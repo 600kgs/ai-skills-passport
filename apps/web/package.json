@@ -14,7 +14,7 @@
     "@passport/db": "workspace:*",
     "@passport/ledger": "workspace:*",
     "better-auth": "1.7.12",
-    "next": "16.4.2",
+    "next": "16.4.6",
     "pg-boss": "12.38.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -28,7 +28,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.4.2",
+    "eslint-config-next": "16.4.6",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

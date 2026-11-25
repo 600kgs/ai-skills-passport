@@ -103,11 +103,13 @@ export function NewRecordForm({ skills }: { skills: SkillOption[] }) {
   const [student, setStudent] = useState<StudentInput>(emptyStudent);
   const [record, setRecord] = useState<RecordInput>({ skillId: "", dateEarned: today(), earnedThrough: "", verification: "PENDING" });
 
+  const searching = mode === "existing" && q.trim().length >= 2;
   useEffect(() => {
-    if (mode !== "existing" || q.trim().length < 2) { setFound([]); return; }
+    if (!searching) return;
     const id = setTimeout(() => { searchStudents(q).then(setFound).catch(() => setFound([])); }, 250);
     return () => clearTimeout(id);
-  }, [q, mode]);
+  }, [q, searching]);
+  const shown = searching ? found : [];
 
   return (
     <form className="mt-6 space-y-8" onSubmit={(e) => {
@@ -139,9 +141,9 @@ export function NewRecordForm({ skills }: { skills: SkillOption[] }) {
                   <span className={caption}>{t.search}</span>
                   <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.searchHint} className={field} />
                 </label>
-                {found.length > 0 && (
+                {shown.length > 0 && (
                   <ul className="mt-2 divide-y divide-line border-2 border-line bg-white">
-                    {found.map((s) => (
+                    {shown.map((s) => (
                       <li key={s.studentId}>
                         <button type="button" onClick={() => setPicked(s)} className="w-full px-3 py-2 text-left hover:bg-panel">
                           <span className="font-semibold text-ink">{s.firstName} {s.lastName}</span> <span className="text-muted">{s.studentId}, {s.email}</span>

@@ -1,6 +1,8 @@
 // what the admin page asks the worker to do. the web app only queues these: the google
 // key stays with the worker, off the internet-facing container
 export const ADMIN_QUEUE = "admin-action";
+// one job per passport that has confirmed skills waiting; the worker owns the queue
+export const ISSUE_QUEUE = "issue-passport";
 
 export type AdminJob =
   | { kind: "sync"; by: string }

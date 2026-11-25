@@ -1,5 +1,5 @@
 import "server-only";
-import { ADMIN_QUEUE, type AdminJob } from "@passport/core";
+import { ADMIN_QUEUE, type AdminJob, ISSUE_QUEUE } from "@passport/core";
 import { PgBoss } from "pg-boss";
 
 // send-only: the worker owns the queue's schema, maintenance and the jobs themselves
@@ -25,4 +25,16 @@ export async function runAdminJob<R>(job: AdminJob, waitMs = 8000): Promise<JobO
     if (j?.state === "failed") return { state: "failed", error: (j.output as { message?: string } | null)?.message ?? "the worker couldn't do it" };
   }
   return { state: "waiting" };
+}
+
+// ask the worker to issue these passports. a failed send is only logged: the worker's sweep finds every
+// confirmed skill still waiting and queues it within a minute anyway
+export async function enqueueIssue(passportIds: string[]): Promise<void> {
+  if (!passportIds.length) return;
+  try {
+    const b = await boss();
+    for (const passportId of passportIds) await b.send(ISSUE_QUEUE, { passportId }, { singletonKey: passportId });
+  } catch (e) {
+    console.error(`couldn't queue issue for ${passportIds.join(", ")}:`, e);
+  }
 }

@@ -1,6 +1,6 @@
 // background worker: applies db migrations, runs the job queue, and polls the sheet.
 import { fileURLToPath } from "node:url";
-import { ADMIN_QUEUE, type AdminJob, type ImportPreview, type ImportResult, type SyncResult } from "@passport/core";
+import { ADMIN_QUEUE, type AdminJob, ISSUE_QUEUE, type ImportPreview, type ImportResult, type SyncResult } from "@passport/core";
 import { auditLog, createDb, eq, passports, skillAwards, students, syncRuns } from "@passport/db";
 import { runMigrations } from "@passport/db/migrate";
 import { PgBoss } from "pg-boss";
@@ -25,7 +25,6 @@ const env = (name: string) => {
   return v;
 };
 const SYNC_EVERY_MS = 15_000;
-export const ISSUE_QUEUE = "issue-passport";
 const NOTIFY_QUEUE = "notify-student";
 
 const url = env("DATABASE_URL");

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activityFilters, passportFilters, queryString } from "./admin-filters.ts";
+import { activityFilters, passportFilters, queryString, recordFilters } from "./admin-filters.ts";
 
 describe("passportFilters", () => {
   it("gives the default view for an empty url", () => {
@@ -46,5 +46,14 @@ describe("queryString", () => {
 
   it("encodes what a search can contain", () => {
     expect(queryString({ q: "ნინო & co" })).toBe("?q=%E1%83%9C%E1%83%98%E1%83%9C%E1%83%9D+%26+co");
+  });
+});
+
+describe("record filters", () => {
+  it("reads known values and drops the rest", () => {
+    expect(recordFilters({ q: " nino ", verification: "PENDING", state: "pending", source: "excel", workshop: "7", page: "2" }))
+      .toEqual({ q: "nino", verification: "PENDING", state: "pending", source: "excel", workshop: 7, page: 2 });
+    expect(recordFilters({ verification: "MAYBE", state: "drop table", source: "x", workshop: "-1", page: "0" }))
+      .toEqual({ q: "", verification: "", state: "", source: "", workshop: null, page: 1 });
   });
 });

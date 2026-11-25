@@ -1,10 +1,12 @@
 "use server";
 
 import type { SyncResult } from "@passport/core";
+import { decideRecord as decide } from "@passport/ledger";
 import { fill } from "@/i18n/format";
 import { getDict } from "@/i18n/server";
 import { currentStaff } from "@/lib/auth";
-import { runAdminJob, type JobOutcome } from "@/lib/queue";
+import { getDb } from "@/lib/db";
+import { enqueueIssue, runAdminJob, type JobOutcome } from "@/lib/queue";
 
 export type ActionResult = { ok: boolean; message: string };
 
@@ -15,10 +17,11 @@ export async function decideRecord(recordId: string, status: "CONFIRMED" | "REJE
   if (!admin) return { ok: false, message: t.onlyAdmins };
   if (!/^REC-\d+$/.test(recordId) || !["CONFIRMED", "REJECTED"].includes(status)) return { ok: false, message: t.invalid };
 
-  const outcome = await runAdminJob<SyncResult>({ kind: "set-status", recordId, status, by: admin.email });
-  if (outcome.state !== "done") return notDone(outcome, t);
+  const r = await decide(getDb(), recordId, status, admin.email);
+  if (!r.ok) return { ok: false, message: r.error };
+  await enqueueIssue(r.value.queue);
   if (status === "REJECTED") return { ok: true, message: fill(t.rejected, { rec: recordId }) };
-  return { ok: true, message: fill(outcome.result.queued ? t.confirmedIssuing : t.confirmed, { rec: recordId }) };
+  return { ok: true, message: fill(r.value.queue.length ? t.confirmedIssuing : t.confirmed, { rec: recordId }) };
 }
 
 export async function syncNow(): Promise<ActionResult> {

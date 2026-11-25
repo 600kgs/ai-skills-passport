@@ -44,6 +44,32 @@ export function passportFilters(p: Params): PassportFilters {
   };
 }
 
+export const RECORDS_PER_PAGE = 25;
+export const RECORD_STATES = ["pending", "applied", "ignored", "failed", "deleted", "withdrawn"] as const;
+export const RECORD_SOURCES = ["sheet", "web", "excel", "workshop"] as const;
+
+export type RecordFilters = {
+  q: string;
+  verification: "" | "PENDING" | "CONFIRMED" | "REJECTED";
+  state: "" | (typeof RECORD_STATES)[number];
+  source: "" | (typeof RECORD_SOURCES)[number];
+  workshop: number | null;
+  page: number;
+};
+
+const pick = <T extends string>(v: string, list: readonly T[]): T | "" => ((list as readonly string[]).includes(v) ? (v as T) : "");
+
+export function recordFilters(p: Params): RecordFilters {
+  return {
+    q: text(p, "q"),
+    verification: pick(one(p, "verification"), ["PENDING", "CONFIRMED", "REJECTED"] as const),
+    state: pick(one(p, "state"), RECORD_STATES),
+    source: pick(one(p, "source"), RECORD_SOURCES),
+    workshop: id(p, "workshop"),
+    page: pageNo(p, "page"),
+  };
+}
+
 // which audit actions each activity filter shows
 export const ACTIVITY_TYPES = {
   admin: ["record_confirmed", "record_rejected", "sync_requested", "rows_imported", "ledger_reset"],

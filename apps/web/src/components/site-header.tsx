@@ -14,7 +14,7 @@ export async function SiteHeader() {
         {t.site.skipToContent}
       </a>
       <div className="bg-graphite text-white">
-        <div className="mx-auto flex h-11 max-w-6xl items-center justify-end gap-3 px-4 pl-32 sm:gap-5 sm:pl-48">
+        <div className="mx-auto flex h-11 max-w-6xl items-center justify-end gap-3 px-4 pl-32 sm:gap-5 sm:pl-47">
           <a href={t.site.universityUrl} className="mr-auto hidden font-display text-lg text-white/85 hover:text-white lg:block">
             {t.site.university}
           </a>
@@ -33,7 +33,7 @@ export async function SiteHeader() {
             {/* eslint-disable-next-line @next/next/no-img-element -- a static svg, nothing for the image optimizer to do */}
             <img src="/btu-logo.svg" alt="BTU" className="h-20 w-auto sm:h-28" />
           </a>
-          <Link href="/" className="ml-32 bg-btu-orange px-2.5 pt-1.5 pb-1 font-display text-lg leading-[0.9] text-ink sm:ml-48 sm:px-3 sm:text-xl">
+          <Link href="/" className="ml-31 bg-btu-orange px-2.5 pt-1.5 pb-1 font-display text-lg leading-[0.9] text-ink sm:ml-43 sm:px-3 sm:text-xl">
             <span className="block">AI Skills</span>
             <span className="block">Digital Passport</span>
           </Link>

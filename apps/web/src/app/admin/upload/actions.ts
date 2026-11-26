@@ -50,7 +50,7 @@ export async function previewUpload(form: FormData): Promise<PreviewState> {
   if (typeof read === "string") return { ok: false, message: read };
   const c = await check(read.grid);
   if ("error" in c) return { ok: false, message: c.error! };
-  return { ok: true, preview: { rows: c.rows.map(({ item: _, ...r }) => r), ignoredColumns: c.ignoredColumns } };
+  return { ok: true, preview: { rows: c.rows.map((r) => ({ line: r.line, label: r.label, ok: r.ok, errors: r.errors })), ignoredColumns: c.ignoredColumns } };
 }
 
 export async function applyUpload(form: FormData): Promise<ApplyState> {

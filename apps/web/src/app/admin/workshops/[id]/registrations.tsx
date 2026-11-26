@@ -84,10 +84,14 @@ export function Registrations({ workshopId, rows, canEdit, hasSkill }: { worksho
                       )}
                     </td>
                     <td className="py-3 pr-4 text-sm">
-                      <span className={r.match === "problem" ? "font-semibold text-magenta" : ""}>{matchLabel[r.match]}</span>
-                      {r.hasSkill && <span className="block font-semibold text-ink">{t.hasSkill}</span>}
-                      {r.notes.map((n) => <span key={n} className="block text-muted">{n}</span>)}
-                      {r.errors.map((n) => <span key={n} className="block border-l-4 border-magenta pl-2">{n}</span>)}
+                      {r.recordId ? <span>{t.recordAdded}</span> : (
+                        <>
+                          <span className={r.match === "problem" ? "font-semibold text-magenta" : ""}>{matchLabel[r.match]}</span>
+                          {r.hasSkill && <span className="block font-semibold text-ink">{t.hasSkill}</span>}
+                          {r.notes.map((n) => <span key={n} className="block text-muted">{n}</span>)}
+                          {r.errors.map((n) => <span key={n} className="block border-l-4 border-magenta pl-2">{n}</span>)}
+                        </>
+                      )}
                     </td>
                     <td className="py-3 pr-4 whitespace-nowrap">{r.recordId ? <Link href={`/admin/records/${r.recordId}`} className={link}>{r.recordId}</Link> : ""}</td>
                   </tr>

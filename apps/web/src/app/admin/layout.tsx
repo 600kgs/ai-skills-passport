@@ -32,7 +32,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   return (
     <>
       <div className="bg-panel">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 pt-16 pb-0 sm:flex-row sm:items-end sm:justify-between sm:pt-20">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 pt-16 pb-0 sm:pt-20">
           <h1 className="pb-3 font-display text-5xl text-ink">{t.title}</h1>
           <Suspense fallback={<AdminNav links={[]} label={t.title} />}>
             <RoleNav label={t.title} labels={t.tabs} />

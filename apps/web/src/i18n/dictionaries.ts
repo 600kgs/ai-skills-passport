@@ -34,6 +34,8 @@ export const en = {
     badge: "Earns",
     register: "Register",
     newTab: "opens the registration form in a new tab",
+    prev: "Previous workshops",
+    next: "More workshops",
   },
   footer: {
     verifyPassport: "Verify a passport",
@@ -619,6 +621,8 @@ export const ka: Dict = {
     badge: "უნარი",
     register: "რეგისტრაცია",
     newTab: "რეგისტრაციის ფორმა ახალ ჩანართში გაიხსნება",
+    prev: "წინა ვორქშოფები",
+    next: "მეტი ვორქშოფი",
   },
   footer: {
     verifyPassport: "პასპორტის შემოწმება",

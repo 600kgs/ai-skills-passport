@@ -35,7 +35,7 @@ export function WorkshopCard({ w, locale, t }: { w: PublicWorkshop; locale: Loca
           <img src={stamp} alt="" className="pointer-events-none float-right mb-2 ml-2 w-16 -rotate-6 sm:ml-3 sm:w-28" />
         )}
         <p className="text-sm font-semibold text-magenta">{w.kind === "hackathon" ? t.hackathon : t.workshop}</p>
-        <h3 className="mt-1 font-display text-3xl leading-tight break-words text-ink sm:text-4xl">{title}</h3>
+        <h3 className="mt-1 font-display text-2xl leading-tight break-words text-ink sm:text-4xl">{title}</h3>
         <p className="mt-2 max-w-prose leading-relaxed">{description}</p>
         <dl className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-sm">
           <dt className="text-muted">{t.place}</dt><dd className="break-words">{w.location}</dd>

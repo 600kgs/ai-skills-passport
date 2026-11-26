@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { queryString, RECORD_SOURCES, RECORD_STATES, type RecordFilters, recordFilters, roleAtLeast } from "@passport/core";
+import { queryString, RECORD_SOURCES, RECORD_STATES, recordFilters, roleAtLeast } from "@passport/core";
 import { listRecords } from "@passport/ledger";
 import { fill, formatDate } from "@/i18n/format";
 import { getDict } from "@/i18n/server";

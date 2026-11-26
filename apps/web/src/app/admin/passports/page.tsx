@@ -3,6 +3,7 @@ import { type PassportFilters, passportFilters, type PassportSort, queryString, 
 import { fill, formatDate } from "@/i18n/format";
 import { getDict } from "@/i18n/server";
 import { listPassports, passportFilterOptions } from "@/lib/admin";
+import { Pager } from "@/components/pager";
 import { requireRole } from "../guard";
 
 const link = "underline decoration-magenta decoration-2 underline-offset-2 hover:text-magenta";
@@ -113,13 +114,8 @@ export default async function AdminPassportsPage({ searchParams }: PageProps<"/a
         </div>
       )}
 
-      {pages > 1 && (
-        <nav aria-label={t.pager} className="mt-6 flex items-center justify-between gap-4">
-          {page > 1 ? <Link href={href(f, { page: page - 1 })} className={`font-display text-2xl text-ink ${link}`}>← {t.prev}</Link> : <span />}
-          <p className="text-muted">{fill(t.pageOf, { page, pages })}</p>
-          {page < pages ? <Link href={href(f, { page: page + 1 })} className={`font-display text-2xl text-ink ${link}`}>{t.next} →</Link> : <span />}
-        </nav>
-      )}
+      <Pager path="/admin/passports" params={{ q: f.q, program: f.program, level: f.level, updated: f.updated, sort: f.sort === "newest" ? "" : f.sort }}
+        page={page} pages={pages} t={d.admin.pager} />
     </section>
   );
 }

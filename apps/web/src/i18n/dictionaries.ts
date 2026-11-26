@@ -284,6 +284,16 @@ export const en = {
       cancelEdit: "Cancel",
       nameSaved: "Name saved.",
     },
+    pager: {
+      label: "Pages",
+      prev: "Previous",
+      next: "Next",
+      pageOf: "Page {page} of {pages}",
+      jump: "Go to page",
+      go: "Go",
+      goTo: "Page {page}",
+      entries: "{n} entries",
+    },
     revoke: {
       revoke: "Revoke",
       close: "Close",
@@ -858,6 +868,16 @@ export const ka: Dict = {
       saveName: "შენახვა",
       cancelEdit: "გაუქმება",
       nameSaved: "სახელი შეინახა.",
+    },
+    pager: {
+      label: "გვერდები",
+      prev: "წინა",
+      next: "შემდეგი",
+      pageOf: "გვერდი {page} / {pages}",
+      jump: "გადასვლა გვერდზე",
+      go: "გადასვლა",
+      goTo: "გვერდი {page}",
+      entries: "{n} ჩანაწერი",
     },
     revoke: {
       revoke: "გაუქმება",

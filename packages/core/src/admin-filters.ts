@@ -84,8 +84,7 @@ export type ActivityFilters = {
   type: ActivityType | "";
   // a passport id or record id, matched against the log entry's subject
   q: string;
-  // keyset paging: show entries older than this id. stays fast however long the log grows
-  before: number | null;
+  page: number;
 };
 
 export function activityFilters(p: Params): ActivityFilters {
@@ -94,8 +93,26 @@ export function activityFilters(p: Params): ActivityFilters {
     // own keys only: "toString" is "in" every object
     type: Object.hasOwn(ACTIVITY_TYPES, type) ? (type as ActivityType) : "",
     q: text(p, "q", 40).toUpperCase(),
-    before: id(p, "before"),
+    page: pageNo(p, "page"),
   };
+}
+
+// the page links a list shows: both ends, the current page and its neighbours, "gap" where pages are skipped.
+// a gap never hides a single page; that page is shown instead
+export function pageWindow(page: number, pages: number): (number | "gap")[] {
+  if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1);
+  const keep = new Set([1, pages, page - 1, page, page + 1]);
+  if (page <= 2) [2, 3].forEach((n) => keep.add(n));
+  if (page >= pages - 1) [pages - 2, pages - 1].forEach((n) => keep.add(n));
+  const nums = [...keep].filter((n) => n >= 1 && n <= pages).sort((a, b) => a - b);
+  const out: (number | "gap")[] = [];
+  for (const n of nums) {
+    const prev = out.at(-1);
+    if (typeof prev === "number" && n - prev === 2) out.push(n - 1);
+    else if (typeof prev === "number" && n - prev > 2) out.push("gap");
+    out.push(n);
+  }
+  return out;
 }
 
 // "?a=1&b=x" from the set values only, so default views keep short, clean links

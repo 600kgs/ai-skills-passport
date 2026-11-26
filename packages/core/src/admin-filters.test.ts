@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activityFilters, passportFilters, queryString, recordFilters } from "./admin-filters.ts";
+import { activityFilters, pageWindow, passportFilters, queryString, recordFilters } from "./admin-filters.ts";
 
 describe("passportFilters", () => {
   it("gives the default view for an empty url", () => {
@@ -25,16 +25,16 @@ describe("passportFilters", () => {
 
 describe("activityFilters", () => {
   it("defaults to everything, newest first", () => {
-    expect(activityFilters({})).toEqual({ type: "", q: "", before: null });
+    expect(activityFilters({})).toEqual({ type: "", q: "", page: 1 });
   });
 
   it("reads type, id search and paging", () => {
-    expect(activityFilters({ type: "records", q: "btu-ai-000143", before: "120" }))
-      .toEqual({ type: "records", q: "BTU-AI-000143", before: 120 });
+    expect(activityFilters({ type: "records", q: "btu-ai-000143", page: "4" }))
+      .toEqual({ type: "records", q: "BTU-AI-000143", page: 4 });
   });
 
   it("ignores unknown types and bad cursors", () => {
-    expect(activityFilters({ type: "toString", before: "abc" })).toMatchObject({ type: "", before: null });
+    expect(activityFilters({ type: "toString", page: "abc" })).toMatchObject({ type: "", page: 1 });
   });
 
   it("has no sheet type any more", () => {
@@ -60,5 +60,21 @@ describe("record filters", () => {
       .toEqual({ q: "nino", verification: "PENDING", state: "pending", source: "excel", workshop: 7, page: 2 });
     expect(recordFilters({ verification: "MAYBE", state: "drop table", source: "x", workshop: "-1", page: "0" }))
       .toEqual({ q: "", verification: "", state: "", source: "", workshop: null, page: 1 });
+  });
+});
+
+describe("page numbers", () => {
+  it("shows every page when there are few", () => {
+    expect(pageWindow(2, 5)).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it("shows the ends and the pages around the current one, with gaps", () => {
+    expect(pageWindow(6, 20)).toEqual([1, "gap", 5, 6, 7, "gap", 20]);
+    expect(pageWindow(1, 20)).toEqual([1, 2, 3, "gap", 20]);
+    expect(pageWindow(20, 20)).toEqual([1, "gap", 18, 19, 20]);
+  });
+
+  it("doesn't put a gap where only one page is missing", () => {
+    expect(pageWindow(4, 20)).toEqual([1, 2, 3, 4, 5, "gap", 20]);
   });
 });

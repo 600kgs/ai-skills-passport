@@ -4,15 +4,13 @@ import { listRecords } from "@passport/ledger";
 import { fill, formatDate } from "@/i18n/format";
 import { getDict } from "@/i18n/server";
 import { getDb } from "@/lib/db";
+import { Pager } from "@/components/pager";
 import { requireRole } from "../guard";
 import { recordStatus } from "./status";
 
 const link = "underline decoration-magenta decoration-2 underline-offset-2 hover:text-magenta";
 const field = "h-12 min-w-0 border-2 border-line bg-white px-3 text-lg text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-magenta";
 const th = "py-2 pr-4 font-display text-xl font-normal text-blue";
-
-const href = (f: RecordFilters, page: number) =>
-  `/admin/records${queryString({ q: f.q, verification: f.verification, state: f.state, source: f.source, workshop: f.workshop, page: page > 1 ? page : null })}`;
 
 export default async function AdminRecordsPage({ searchParams }: PageProps<"/admin/records">) {
   const canEdit = roleAtLeast((await requireRole("viewer")).role, "admin");
@@ -79,13 +77,8 @@ export default async function AdminRecordsPage({ searchParams }: PageProps<"/adm
           </table>
         </div>
       )}
-      {pages > 1 && (
-        <nav aria-label={t.pages} className="mt-6 flex items-center gap-4">
-          {page > 1 && <Link href={href(f, page - 1)} className={link}>← {t.prev}</Link>}
-          <span className="text-muted">{fill(t.pageOf, { page, pages })}</span>
-          {page < pages && <Link href={href(f, page + 1)} className={link}>{t.next} →</Link>}
-        </nav>
-      )}
+      <Pager path="/admin/records" params={{ q: f.q, verification: f.verification, state: f.state, source: f.source, workshop: f.workshop }}
+        page={page} pages={pages} t={d.admin.pager} />
     </section>
   );
 }

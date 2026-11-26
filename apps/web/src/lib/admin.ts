@@ -3,7 +3,7 @@ import {
   ACTIVITY_PER_PAGE, ACTIVITY_TYPES, type ActivityFilters, authorizedSigners, normalizeCode, type PassportFilters, PASSPORTS_PER_PAGE,
   REMOVED_FROM_SHEET,
 } from "@passport/core";
-import { and, auditLog, desc, eq, inArray, lt, passports, passportVersions, skillAwards, type SQL, sql, students, workshops } from "@passport/db";
+import { and, auditLog, desc, eq, inArray, passports, passportVersions, skillAwards, type SQL, sql, students, workshops } from "@passport/db";
 import { getDb } from "@/lib/db";
 
 const SOL_PER_ISSUE = 0.0017; // measured on devnet, 2026-10-22
@@ -167,18 +167,18 @@ export async function activityPage(f: ActivityFilters) {
   const auditConds: SQL[] = [];
   if (f.type) auditConds.push(inArray(auditLog.action, [...ACTIVITY_TYPES[f.type]]));
   if (f.q) auditConds.push(sql`${auditLog.subject} ilike ${contains(f.q)}`);
-  if (f.before) auditConds.push(lt(auditLog.id, f.before));
-
-  // one extra row tells whether an older page exists
-  const audit = await db.select().from(auditLog).where(auditConds.length ? and(...auditConds) : undefined).orderBy(desc(auditLog.id)).limit(ACTIVITY_PER_PAGE + 1);
+  const where = auditConds.length ? and(...auditConds) : undefined;
+  const [counted] = await db.select({ n: sql<number>`count(*)::int` }).from(auditLog).where(where);
+  const total = counted?.n ?? 0;
+  const pages = Math.max(1, Math.ceil(total / ACTIVITY_PER_PAGE));
+  // a page past the end (an old link after a filter change) shows the last page, not an empty list
+  const page = Math.min(f.page, pages);
+  const audit = await db.select().from(auditLog).where(where).orderBy(desc(auditLog.id))
+    .limit(ACTIVITY_PER_PAGE).offset((page - 1) * ACTIVITY_PER_PAGE);
   // which subjects are passports that exist, so the page can link them
   const ids = [...new Set(audit.map((a) => a.subject).filter((s): s is string => !!s && s.startsWith("BTU-AI-")))];
   const known = ids.length ? await db.select({ id: passports.passportId }).from(passports).where(inArray(passports.passportId, ids)) : [];
-  return {
-    audit: audit.slice(0, ACTIVITY_PER_PAGE),
-    olderAudit: audit.length > ACTIVITY_PER_PAGE ? audit[ACTIVITY_PER_PAGE - 1]!.id : null,
-    passportIds: new Set(known.map((k) => k.id)),
-  };
+  return { audit, total, pages, page, passportIds: new Set(known.map((k) => k.id)) };
 }
 
 // public data, read straight from the chain; null if solana doesn't answer

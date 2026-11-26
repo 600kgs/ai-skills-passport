@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { type ActivityFilters, activityFilters, queryString } from "@passport/core";
-import { formatDateTime } from "@/i18n/format";
+import { Pager } from "@/components/pager";
+import { fill, formatDateTime } from "@/i18n/format";
 import { getDict } from "@/i18n/server";
 import { activityPage, loggedVersion } from "@/lib/admin";
 import { requireRole } from "../guard";
@@ -11,20 +12,20 @@ const field = "h-12 min-w-0 border-2 border-line bg-white px-3 text-lg text-ink 
 // the list keeps its state in the url
 const href = (f: ActivityFilters, change: Partial<ActivityFilters>) => {
   const n = { ...f, ...change };
-  return `/admin/activity${queryString({ type: n.type, q: n.q, before: n.before })}`;
+  return `/admin/activity${queryString({ type: n.type, q: n.q, page: n.page > 1 ? n.page : null })}`;
 };
 
 export default async function AdminActivityPage({ searchParams }: PageProps<"/admin/activity">) {
   await requireRole("viewer");
   const f = activityFilters(await searchParams);
-  const [d, { audit, olderAudit, passportIds }] = await Promise.all([getDict(), activityPage(f)]);
+  const [d, { audit, total, pages, page, passportIds }] = await Promise.all([getDict(), activityPage(f)]);
   const t = d.admin.activity;
   const actions = t.actions as Record<string, string>;
 
   // a passport opens its page; a record shows its own history here
   const subject = (s: string) => passportIds.has(s)
     ? <Link href={`/admin/passports/${s}`} className={`text-ink ${link}`}>{s}</Link>
-    : /^REC-\d+$/.test(s) ? <Link href={href(f, { q: s, before: null })} className={`text-ink ${link}`}>{s}</Link> : s;
+    : /^REC-\d+$/.test(s) ? <Link href={href(f, { q: s, page: 1 })} className={`text-ink ${link}`}>{s}</Link> : s;
 
   return (
     <div className="mt-10 max-w-3xl">
@@ -49,7 +50,7 @@ export default async function AdminActivityPage({ searchParams }: PageProps<"/ad
           </label>
           <button type="submit" className="h-12 self-end bg-magenta px-5 pt-1 font-display text-2xl text-white hover:bg-magenta-deep">{t.search}</button>
         </form>
-        {(f.type || f.q) && <p className="mt-3"><Link href={href(f, { type: "", q: "", before: null })} className={`text-ink ${link}`}>{t.clear}</Link></p>}
+        {(f.type || f.q) && <p className="mt-3"><Link href={href(f, { type: "", q: "", page: 1 })} className={`text-ink ${link}`}>{t.clear}</Link></p>}
 
         {audit.length === 0 ? <p className="mt-6 text-muted">{t.none}</p> : (
           <ol className="mt-2 divide-y divide-line">
@@ -61,10 +62,8 @@ export default async function AdminActivityPage({ searchParams }: PageProps<"/ad
             ))}
           </ol>
         )}
-        <div className="mt-4 flex justify-between gap-4">
-          {f.before ? <Link href={href(f, { before: null })} className={`text-ink ${link}`}>{t.newer}</Link> : <span />}
-          {olderAudit && <Link href={href(f, { before: olderAudit })} className={`font-display text-2xl text-ink ${link}`}>{t.older} →</Link>}
-        </div>
+        <p className="mt-4 text-sm text-muted">{fill(d.admin.pager.entries, { n: total })}</p>
+        <Pager path="/admin/activity" params={{ type: f.type, q: f.q }} page={page} pages={pages} t={d.admin.pager} />
       </section>
 
     </div>

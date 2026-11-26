@@ -14,13 +14,13 @@ export async function SiteHeader() {
         {t.site.skipToContent}
       </a>
       <div className="bg-graphite text-white">
-        <div className="mx-auto flex h-11 max-w-6xl items-center justify-end gap-3 px-4 pl-32 sm:gap-5 sm:pl-47">
+        <div className="mx-auto flex h-11 max-w-6xl items-center justify-end gap-2 px-4 pl-32 sm:gap-5 sm:pl-47">
           <a href={t.site.universityUrl} className="mr-auto hidden font-display text-lg text-white/85 hover:text-white lg:block">
             {t.site.university}
           </a>
           <LangSwitch />
-          {user?.role && <Link href="/admin" className="font-display text-lg hover:text-yellow">{t.nav.admin}</Link>}
-          <Link href={user ? "/me" : "/login"} className="bg-magenta px-3 pt-1.5 pb-1 font-display text-lg leading-none text-white hover:bg-magenta-deep">
+          {user?.role && <Link href="/admin" className="font-display text-base whitespace-nowrap hover:text-yellow sm:text-lg">{t.nav.admin}</Link>}
+          <Link href={user ? "/me" : "/login"} className="bg-magenta px-2 pt-1.5 pb-1 font-display text-base leading-none whitespace-nowrap text-white hover:bg-magenta-deep sm:px-3 sm:text-lg">
             {user ? t.nav.myPassport : t.nav.signIn}
           </Link>
         </div>

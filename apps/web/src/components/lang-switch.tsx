@@ -13,7 +13,7 @@ export function LangSwitch() {
   const pick = (l: Locale) => start(async () => { await setLocale(l); router.refresh(); });
 
   return (
-    <div role="group" aria-label={t.lang.label} className={`flex font-display text-lg ${pending ? "opacity-60" : ""}`}>
+    <div role="group" aria-label={t.lang.label} className={`flex font-display text-base sm:text-lg ${pending ? "opacity-60" : ""}`}>
       {(["ka", "en"] as const).map((l, i) => (
         <span key={l} className="flex">
           {i > 0 && <span aria-hidden className="px-1.5 text-white/40">/</span>}

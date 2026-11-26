@@ -20,12 +20,18 @@ export async function revokeVersion(db: Db, chain: Closer, input: { code: string
     const base = { passportId: version.passportId, versionNo: version.versionNo };
     if (version.revokedAt) return { ...base, withdrawn: [] as string[], reissue: false };
 
-    const earlier = await tx.select({ ids: passportVersions.includedRecordIds }).from(passportVersions)
-      .where(and(eq(passportVersions.passportId, version.passportId), sql`${passportVersions.versionNo} < ${version.versionNo}`));
-    const before = new Set(earlier.flatMap((v) => v.ids));
+    const others = await tx.select({ id: passportVersions.id, ids: passportVersions.includedRecordIds, state: passportVersions.state, revokedAt: passportVersions.revokedAt })
+      .from(passportVersions).where(eq(passportVersions.passportId, version.passportId));
+    // a version still being written would put its frozen skills back as issued when it commits, undoing this revoke
+    if (others.some((v) => v.state === "rendering" || v.state === "anchoring")) {
+      throw new Error(`a version of ${version.passportId} is being issued right now; try again in a minute`);
+    }
+    // a skill can only be withdrawn here if no other valid version still carries it: a later one would keep
+    // showing it, an earlier one would make it come back. revoked versions don't count
+    const carried = new Set(others.filter((v) => v.id !== version.id && v.state === "issued" && !v.revokedAt).flatMap((v) => v.ids));
     const withdraw = [...new Set(input.withdraw)];
-    const wrong = withdraw.filter((id) => !version.includedRecordIds.includes(id) || before.has(id));
-    if (wrong.length) throw new Error(`${wrong.join(", ")} weren't first added in V${version.versionNo}; only those can be withdrawn with it`);
+    const wrong = withdraw.filter((id) => !version.includedRecordIds.includes(id) || carried.has(id));
+    if (wrong.length) throw new Error(`${wrong.join(", ")} can't be withdrawn with V${version.versionNo}: another valid version of this passport also has ${wrong.length === 1 ? "it" : "them"}`);
 
     await tx.execute(sql`select 1 from passports where passport_id = ${version.passportId} for update`);
     await tx.update(passportVersions).set({ revokedAt: new Date(), revokeReason: reason })

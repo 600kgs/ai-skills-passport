@@ -1,6 +1,6 @@
 // skill records written by staff: the record form, excel uploads and workshop lists all come through here
 import { type NewRecord, type RecordInput, recordHash, type StudentInput, validateRecord, validateStudent } from "@passport/core";
-import { auditLog, type Db, eq, inArray, passports, skillAwards, skills, sql, students } from "@passport/db";
+import { auditLog, type Db, eq, inArray, passports, passportVersions, skillAwards, skills, sql, students } from "@passport/db";
 import { fail, type LedgerResult, ok, type Tx, withLedgerLock } from "./lock.ts";
 
 export type RecordSource = "web" | "excel" | "workshop";
@@ -21,6 +21,10 @@ async function plan(tx: Tx | Db, items: NewRecord[]) {
   const known = new Map((await tx.select().from(students)).map((s) => [s.studentId, s]));
   const emailOwner = new Map([...known.values()].map((s) => [lower(s.email), s.studentId]));
   const fresh = new Map<string, StudentInput>(); // new students earlier in this batch
+  // one student can't hold the same skill twice for the same date: a second upload of a file would otherwise print it twice
+  const live = await tx.select({ recordId: skillAwards.recordId, studentId: skillAwards.studentId, skillId: skillAwards.skillId, dateEarned: skillAwards.dateEarned })
+    .from(skillAwards).where(sql`${skillAwards.state} not in ('deleted', 'withdrawn') and ${skillAwards.verification} <> 'REJECTED'`);
+  const holding = new Map(live.map((a) => [`${a.studentId}|${a.skillId}|${a.dateEarned}`, a.recordId]));
 
   return items.map((it, index) => {
     const student = clean(it.student);
@@ -35,11 +39,15 @@ async function plan(tx: Tx | Db, items: NewRecord[]) {
       const owner = emailOwner.get(student.email);
       if (owner && owner !== student.studentId) errors.push(`email ${student.email} already belongs to ${owner}`);
     }
+    const key = `${student.studentId}|${record.skillId}|${record.dateEarned}`;
+    const twin = holding.get(key);
+    if (!errors.length && twin) errors.push(`${student.studentId} already has ${record.skillId} for ${record.dateEarned} (${twin})`);
     const newStudent = !known.has(student.studentId);
     if (!errors.length && newStudent && !fresh.has(student.studentId)) {
       fresh.set(student.studentId, student);
       emailOwner.set(student.email, student.studentId);
     }
+    if (!errors.length) holding.set(key, `line ${index + 1} of this batch`);
     return { index, student, record, errors, newStudent, skill: catalog.get(record.skillId) };
   });
 }
@@ -111,11 +119,21 @@ export async function createRecordsTx(tx: Tx, items: NewRecord[], opts: CreateOp
 
 const EDITABLE = new Set(["pending", "ignored"]);
 
+// records frozen into a version that is being made right now. changing one would be undone when that version
+// commits (the ledger has to match what went on chain), so it waits until the version is done
+async function inFlight(tx: Tx, recordId: string): Promise<boolean> {
+  const rows = await tx.select({ id: passportVersions.id }).from(passportVersions)
+    .where(sql`${passportVersions.state} in ('rendering', 'anchoring') and ${recordId} = any(${passportVersions.includedRecordIds})`).limit(1);
+  return rows.length > 0;
+}
+const BUSY = (recordId: string) => `${recordId} is in a passport version being issued right now; try again in a minute`;
+
 export async function updateRecord(db: Db, recordId: string, patch: RecordInput, by: string): Promise<LedgerResult<{ queue: string[] }>> {
   return withLedgerLock(db, async (tx) => {
     const [award] = await tx.select().from(skillAwards).where(eq(skillAwards.recordId, recordId));
     if (!award) return fail(`${recordId} doesn't exist`);
     if (!EDITABLE.has(award.state)) return fail(`${recordId} is ${award.state === "applied" ? "already in an issued passport" : award.state} and can't be edited`);
+    if (await inFlight(tx, recordId)) return fail(BUSY(recordId));
     const catalog = new Map((await tx.select().from(skills)).map((s) => [s.skillId, s]));
     const record: RecordInput = { ...patch, skillId: patch.skillId.trim().toUpperCase(), earnedThrough: patch.earnedThrough?.trim() || null };
     const errors = validateRecord(record, new Set(catalog.keys()));
@@ -140,6 +158,7 @@ export async function deleteRecord(db: Db, recordId: string, by: string): Promis
     if (!award) return fail(`${recordId} doesn't exist`);
     if (award.state === "applied") return fail(`${recordId} is in an issued passport; revoke the version instead`);
     if (award.state === "deleted" || award.state === "withdrawn") return fail(`${recordId} is already ${award.state}`);
+    if (await inFlight(tx, recordId)) return fail(BUSY(recordId));
     await tx.update(skillAwards).set({ state: "deleted", updatedAt: new Date() }).where(eq(skillAwards.recordId, recordId));
     await tx.insert(auditLog).values({ actor: by, action: "record_deleted", subject: recordId, details: { studentId: award.studentId } });
     return ok(undefined);

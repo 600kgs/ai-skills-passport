@@ -21,11 +21,11 @@ export default async function AdminPassportPage({ params }: PageProps<"/admin/pa
   const actions = d.admin.activity.actions as Record<string, string>;
   const cluster = process.env.SOLANA_RPC_URL?.includes("devnet") ? "?cluster=devnet" : "";
 
-  // the skills each version added, for the revoke dialog
+  // the skills a revoke of this version may withdraw: the ones no other valid version carries (same rule as the worker)
   const nameOf = new Map(p.records.map((r) => [r.recordId, r.skillName]));
   const added = (v: (typeof p.versions)[number]) => {
-    const before = new Set(p.versions.filter((x) => x.versionNo < v.versionNo).flatMap((x) => x.includedRecordIds));
-    return v.includedRecordIds.filter((id) => !before.has(id)).map((id) => ({ recordId: id, name: nameOf.get(id) ?? id }));
+    const carried = new Set(p.versions.filter((x) => x.id !== v.id && x.state === "issued" && !x.revokedAt).flatMap((x) => x.includedRecordIds));
+    return v.includedRecordIds.filter((id) => !carried.has(id)).map((id) => ({ recordId: id, name: nameOf.get(id) ?? id }));
   };
 
   const recordStatus = (r: (typeof p.records)[number]) => {

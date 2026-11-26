@@ -17,7 +17,7 @@ COPY packages/db packages/db
 COPY packages/ledger packages/ledger
 COPY apps/worker apps/worker
 # copied files keep the host's modes; make the source readable to node whatever the host umask was
-RUN chmod -R a+rX /app/package.json /app/tsconfig.base.json /app/apps /app/packages/core/src /app/packages/core/package.json /app/packages/db/src /app/packages/db/migrations /app/packages/db/package.json
+RUN chmod -R a+rX /app/package.json /app/tsconfig.base.json /app/apps /app/packages/core/src /app/packages/core/package.json /app/packages/db/src /app/packages/db/migrations /app/packages/db/package.json /app/packages/ledger/src /app/packages/ledger/package.json
 # issued pdfs live on a volume mounted here; it inherits this owner on first use
 RUN mkdir -p /data/storage && chown node:node /data/storage
 USER node

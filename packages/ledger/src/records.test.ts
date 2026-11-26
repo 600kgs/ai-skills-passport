@@ -153,6 +153,44 @@ describe("changing records", () => {
   });
 });
 
+describe("while a version is being issued", () => {
+  async function inFlight(passportId: string, recordId: string, state: "rendering" | "anchoring") {
+    await db.insert(passportVersions).values({ passportId, versionNo: 1, verificationCode: `FLY-${recordId}`, state, skillCount: 1, includedRecordIds: [recordId] });
+  }
+
+  it("updateRecord and deleteRecord refuse a record in a version being written to the chain", async () => {
+    const { created } = await createRecords(db, [item(nino, "CONFIRMED")], web);
+    await inFlight(created[0]!.passportId, created[0]!.recordId, "anchoring");
+    expect(await updateRecord(db, created[0]!.recordId, { ...item(nino).record, dateEarned: "2026-11-01" }, by)).toMatchObject({ ok: false });
+    expect(await deleteRecord(db, created[0]!.recordId, by)).toMatchObject({ ok: false });
+    expect((await db.select().from(skillAwards))[0]).toMatchObject({ state: "pending", dateEarned: "2026-11-25" });
+  });
+
+  it("updateStudent refuses a name change while the first version is being made", async () => {
+    const { created } = await createRecords(db, [item(nino, "CONFIRMED")], web);
+    await inFlight(created[0]!.passportId, created[0]!.recordId, "rendering");
+    expect((await updateStudent(db, nino.studentId, { firstName: "Nina" }, by)).ok).toBe(false);
+  });
+});
+
+describe("duplicates", () => {
+  it("the same skill on the same date for one student is refused, but not after it was deleted", async () => {
+    const first = await createRecords(db, [item(nino, "CONFIRMED")], web);
+    const again = await createRecords(db, [item(nino, "CONFIRMED")], web);
+    expect(again.created).toEqual([]);
+    expect(again.rejected[0]!.errors[0]).toContain(first.created[0]!.recordId);
+    expect((await checkRecords(db, [item(nino)]))[0]!.errors.length).toBe(1);
+    await deleteRecord(db, first.created[0]!.recordId, by);
+    expect((await createRecords(db, [item(nino)], web)).created).toHaveLength(1);
+  });
+
+  it("the same row twice in one file is refused the second time", async () => {
+    const r = await createRecords(db, [item(nino), item(nino)], web);
+    expect(r.created).toHaveLength(1);
+    expect(r.rejected.map((x) => x.index)).toEqual([1]);
+  });
+});
+
 describe("students", () => {
   it("updateStudent refuses a name change after the first issued version, allows it before", async () => {
     const { created } = await createRecords(db, [item(nino, "CONFIRMED")], web);

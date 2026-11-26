@@ -119,8 +119,8 @@ export async function issuePassport(db: Db, deps: IssueDeps, passportId: string)
           (select version_no from passport_versions where id = latest_version_id) < ${version.versionNo})`);
       let changedDuringIssue: string[] = [];
       if (version.skills) {
-        // the chain now holds the frozen skills, so the ledger must too. a row changed during the chain
-        // write goes back to what was issued; the next sync then flags it as edited after issue
+        // the chain now holds the frozen skills, so the ledger must too. staff can't change a record while its
+        // version is being made (the ledger refuses); anything that slipped through goes back to what was issued and is logged
         const live = new Map((await tx.select().from(skillAwards)
           .where(inArray(skillAwards.recordId, version.includedRecordIds))).map((a) => [a.recordId, a]));
         changedDuringIssue = version.skills.filter((s) => !stillHolds(s, live.get(s.recordId))).map((s) => s.recordId);

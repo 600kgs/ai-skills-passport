@@ -76,6 +76,37 @@ describe("revoking a version", () => {
     expect((await db.select().from(passportVersions).where(eq(passportVersions.versionNo, 2)))[0]!.revokedAt).toBe(null);
   });
 
+  it("withdrawing a skill that another valid version still carries is refused", async () => {
+    // V1 = {A} is older, V2 = {A, B, C} is the latest and still valid: A can't be withdrawn by revoking V1
+    await expect(revokeVersion(db, chain, { code: "CODE-V1", reason: "x", withdraw: ["REC-A"], by })).rejects.toThrow(/REC-A/);
+    expect((await award("REC-A")).state).toBe("applied");
+  });
+
+  it("a skill put back by an earlier revoke can be withdrawn with the next version", async () => {
+    await revokeVersion(db, chain, { code: "CODE-V2", reason: "forgot to tick C", withdraw: [], by });
+    // the corrected V3 carries A, B, C again
+    const [v3] = await db.insert(passportVersions).values({
+      passportId: "BTU-AI-000001", versionNo: 3, verificationCode: "CODE-V3", state: "issued", skillCount: 3,
+      includedRecordIds: ["REC-A", "REC-B", "REC-C"], pdfSha256: "bb", txSignature: "sig3", issuedAt: new Date(),
+    }).returning();
+    open.add("CODE-V3");
+    await db.update(skillAwards).set({ state: "applied", appliedInVersionId: v3!.id }).where(sql`${skillAwards.recordId} in ('REC-B', 'REC-C')`);
+    await db.update(passports).set({ latestVersionId: v3!.id });
+    const r = await revokeVersion(db, chain, { code: "CODE-V3", reason: "C was a mistake", withdraw: ["REC-C"], by });
+    expect(r.withdrawn).toEqual(["REC-C"]);
+    expect((await award("REC-C")).state).toBe("withdrawn");
+    expect((await award("REC-B")).state).toBe("pending");
+  });
+
+  it("is refused while a newer version of the passport is being written to the chain", async () => {
+    await db.insert(passportVersions).values({
+      passportId: "BTU-AI-000001", versionNo: 3, verificationCode: "CODE-V3", state: "anchoring", skillCount: 3,
+      includedRecordIds: ["REC-A", "REC-B", "REC-C"], pdfSha256: "bb",
+    });
+    await expect(revokeVersion(db, chain, { code: "CODE-V2", reason: "x", withdraw: ["REC-C"], by })).rejects.toThrow(/being issued/);
+    expect((await award("REC-C")).state).toBe("applied");
+  });
+
   it("a reason is required", async () => {
     await expect(revokeVersion(db, chain, { code: "CODE-V2", reason: "  ", withdraw: [], by })).rejects.toThrow(/reason/);
   });

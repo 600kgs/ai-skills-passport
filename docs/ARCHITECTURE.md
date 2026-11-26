@@ -31,7 +31,7 @@ Two processes share one PostgreSQL database: a **web app** for verification, stu
 - **IDs come from the system:** Record IDs (`REC-0123`) and Passport IDs (`BTU-AI-000151`) are assigned when a record or a student is created.
 - **Every change is logged** with the staff member's email: records, decisions, staff and role changes, skills, workshops and revokes.
 
-**Workshops.** Staff list upcoming workshops and hackathons on the site, each with the skill it gives and a link to its own registration form (for example a Google Form). After the event they upload the form's export, tick who passed, and the ticked students get `PENDING` records for that skill. A student who is already in the system is matched by BTU email and keeps their stored name.
+**Workshops.** Staff list upcoming workshops and hackathons on the site, each with the skill it gives and a link to its own registration form (for example a Google Form). After the event they upload the form's export, tick who passed, and the ticked students get `PENDING` records for that skill. A student who is already in the system is matched by BTU email and keeps their stored name. A new student gets an ID from the system (`BTU-S-000001`, ...) and a name taken from the email address, flagged for staff to check, so the form only asks for program and level. If real BTU student IDs arrive later (for example from BTU Classroom), they must be matched to these students by email, not added as new ones.
 
 ## 2. Processing
 

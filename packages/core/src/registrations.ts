@@ -35,6 +35,15 @@ function columnsOf(header: string[]): Partial<Record<Field, number>> {
   return cols;
 }
 
+const cap = (w: string) => w.split("-").map((p) => (p ? p[0]!.toUpperCase() + p.slice(1).toLowerCase() : p)).join("-");
+
+// btu addresses are first.last, sometimes with a number (nika.loliashvili.1). a guess: double first names come out
+// glued ("otaritomas"), so staff check it before the first version is issued
+export function nameFromEmail(email: string): { firstName: string; lastName: string } {
+  const parts = email.trim().split("@")[0]!.split(".").filter((p) => p && !/^\d+$/.test(p));
+  return { firstName: cap(parts[0] ?? ""), lastName: parts.slice(1).map(cap).join(" ") };
+}
+
 export function parseRegistrations(grid: string[][]): { rows: RegistrationRow[]; error?: string } {
   const headerIdx = grid.findIndex((r) => columnsOf(r).email !== undefined);
   if (headerIdx < 0) return { rows: [], error: "The file has no email column. Export the form's responses with \"Collect email addresses\" turned on." };
@@ -47,8 +56,11 @@ export function parseRegistrations(grid: string[][]): { rows: RegistrationRow[];
     const errors = isBtuAccount({ email, emailVerified: true }) ? [] : [`"${get("email")}" isn't a btu.edu.ge address`];
     // the newest answer from the same person wins
     byEmail.delete(email);
+    // the form may not ask for names at all; then they come from the address
+    const guess = nameFromEmail(email);
     byEmail.set(email, {
-      line: headerIdx + 2 + i, email, studentId: get("studentId"), firstName: get("firstName"), lastName: get("lastName"),
+      line: headerIdx + 2 + i, email, studentId: get("studentId"),
+      firstName: get("firstName") || guess.firstName, lastName: get("lastName") || guess.lastName,
       program: get("program"), educationLevel: get("educationLevel"), errors,
     });
   }

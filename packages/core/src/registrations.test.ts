@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseCsv, parseRegistrations } from "./registrations.ts";
+import { nameFromEmail, parseCsv, parseRegistrations } from "./registrations.ts";
 
 const header = ["Timestamp", "Email address", "სახელი / First name (Latin letters)", "გვარი / Last name (Latin letters)", "სტუდენტის ID / Student ID", "პროგრამა / Program", "საფეხური / Education level"];
 const nino = ["2026/11/20 10:00", "Nino.M@btu.edu.ge", "Nino", "Maisuradze", "BTU-T-0001", "Computer Science", "Bachelor"];
@@ -37,6 +37,32 @@ describe("registration export", () => {
 
   it("a file without an email column is an error", () => {
     expect(parseRegistrations([["Name", "Student ID"], ["a", "b"]]).error).toContain("email");
+  });
+});
+
+describe("names from the email", () => {
+  it("splits first.last.N and capitalises", () => {
+    expect(nameFromEmail("nika.loliashvili.1@btu.edu.ge")).toEqual({ firstName: "Nika", lastName: "Loliashvili" });
+    expect(nameFromEmail("OtariTomas.Sepashvili.1@BTU.edu.ge")).toEqual({ firstName: "Otaritomas", lastName: "Sepashvili" });
+    expect(nameFromEmail("nino.maisuradze@btu.edu.ge")).toEqual({ firstName: "Nino", lastName: "Maisuradze" });
+  });
+
+  it("keeps hyphenated names and extra parts in the last name", () => {
+    expect(nameFromEmail("ana-maria.beridze.kvaratskhelia.2@btu.edu.ge")).toEqual({ firstName: "Ana-Maria", lastName: "Beridze Kvaratskhelia" });
+  });
+
+  it("gives no last name when the address has no dot", () => {
+    expect(nameFromEmail("gkapanadze@btu.edu.ge")).toEqual({ firstName: "Gkapanadze", lastName: "" });
+  });
+
+  it("a form without name or id questions takes the names from the email", () => {
+    const r = parseRegistrations([["Timestamp", "Email address", "პროგრამა / Program", "საფეხური / Education level"], ["x", "nika.loliashvili.1@btu.edu.ge", "Computer Science", "Bachelor's"]]);
+    expect(r.rows[0]).toMatchObject({ email: "nika.loliashvili.1@btu.edu.ge", firstName: "Nika", lastName: "Loliashvili", studentId: "", errors: [] });
+  });
+
+  it("names a student typed win over the email", () => {
+    const r = parseRegistrations([["Email address", "First name", "Last name"], ["nika.loliashvili.1@btu.edu.ge", "Nikoloz", "Loliashvili"]]);
+    expect(r.rows[0]!.firstName).toBe("Nikoloz");
   });
 });
 

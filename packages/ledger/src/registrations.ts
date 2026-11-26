@@ -1,5 +1,5 @@
 // who registered for a workshop (from its outside form's export), who passed, and the skill records made for them
-import { type NewRecord, type RegistrationRow, type StudentInput, toTbilisi, validateStudent } from "@passport/core";
+import { nameFromEmail, type NewRecord, type RegistrationRow, type StudentInput, toTbilisi, validateStudent } from "@passport/core";
 import { and, auditLog, type Db, eq, inArray, isNull, skillAwards, sql, students, workshopRegistrations, workshops } from "@passport/db";
 import { fail, type LedgerResult, ok, withLedgerLock } from "./lock.ts";
 import { createRecordsTx } from "./records.ts";
@@ -63,9 +63,15 @@ export async function registrationsFor(db: Db, workshopId: number) {
       if (!sameName(stored.firstName, r.firstName) || !sameName(stored.lastName, r.lastName)) notes.push(`stored as ${stored.firstName} ${stored.lastName}; that name is used`);
       if (r.studentId && r.studentId !== stored.studentId) notes.push(`typed id ${r.studentId}, stored ${stored.studentId}; the stored one is used`);
     } else {
-      errors.push(...validateStudent(asStudent(r)));
-      const owner = ownerOf.get(r.studentId);
+      // no id typed: the system gives one when the record is made, so only the rest is checked here
+      errors.push(...validateStudent({ ...asStudent(r), studentId: r.studentId || "BTU-S-000000" }));
+      const owner = r.studentId ? ownerOf.get(r.studentId) : undefined;
       if (owner && owner !== r.email) errors.push(`student id ${r.studentId} belongs to ${owner}`);
+      const guess = nameFromEmail(r.email);
+      if (sameName(guess.firstName, r.firstName) && sameName(guess.lastName, r.lastName)) {
+        notes.push("name taken from the email; check the spelling before confirming (it can be fixed until the first issue)");
+      }
+      if (!r.studentId) notes.push("the system gives this student an id");
     }
     const match: "existing" | "new" | "problem" = stored ? "existing" : errors.length ? "problem" : "new";
     return { ...r, match, notes, errors, hasSkill: !!stored && holders.has(stored.studentId), storedName: stored ? `${stored.firstName} ${stored.lastName}` : null };
@@ -90,17 +96,27 @@ export async function createWorkshopRecords(db: Db, workshopId: number, by: stri
     if (!rows.length) return ok({ created: [], rejected: [] });
     const emails = rows.map((r) => r.email);
     const known = new Map((await tx.select().from(students).where(inArray(sql`lower(${students.email})`, emails))).map((s) => [s.email.toLowerCase(), s]));
+    // new students the form gave no id get the next BTU-S number
+    const [maxS] = (await tx.execute<{ n: number }>(sql`select coalesce(max(substring(student_id from '^BTU-S-(\\d+)$')::int), 0) as n from students`)).rows;
+    let nextS = Number(maxS?.n ?? 0);
+    const assigned = new Map<number, string>();
+    for (const r of rows) {
+      if (!known.has(r.email) && !r.studentId) assigned.set(r.id, `BTU-S-${String(++nextS).padStart(6, "0")}`);
+    }
     const items: NewRecord[] = rows.map((r) => {
       const s = known.get(r.email);
       return {
         // a student already in the ledger keeps who they are; only new students take what they typed
-        student: s ? { studentId: s.studentId, firstName: s.firstName, lastName: s.lastName, email: s.email, program: s.program, educationLevel: s.educationLevel, status: s.status } : asStudent(r),
+        student: s ? { studentId: s.studentId, firstName: s.firstName, lastName: s.lastName, email: s.email, program: s.program, educationLevel: s.educationLevel, status: s.status }
+          : asStudent({ ...r, studentId: assigned.get(r.id) ?? r.studentId }),
         record: { skillId: w.skillId!, dateEarned: toTbilisi(w.startsAt).slice(0, 10), earnedThrough: w.title, verification: "PENDING" },
       };
     });
     const result = await createRecordsTx(tx, items, { by, source: "workshop", workshopId });
     for (const c of result.created) {
-      await tx.update(workshopRegistrations).set({ recordId: c.recordId }).where(eq(workshopRegistrations.id, rows[c.index]!.id));
+      const reg = rows[c.index]!;
+      await tx.update(workshopRegistrations).set({ recordId: c.recordId, ...(assigned.has(reg.id) ? { studentId: assigned.get(reg.id)! } : {}) })
+        .where(eq(workshopRegistrations.id, reg.id));
     }
     const created = result.created.map((c) => c.recordId);
     await tx.insert(auditLog).values({ actor: by, action: "workshop_records_created", subject: workshopSubject(workshopId), details: { created, rejected: result.rejected.length } });

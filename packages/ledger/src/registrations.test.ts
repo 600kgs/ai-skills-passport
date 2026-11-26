@@ -95,6 +95,39 @@ describe("registrations", () => {
     expect(await db.select().from(passports).where(eq(passports.studentId, "BTU-T-0001"))).toHaveLength(1);
   });
 
+  it("a new student without an id is listed as new, with the name flagged for checking", async () => {
+    await saveRegistrations(db, workshopId, [{ ...row("nika.loliashvili.1@btu.edu.ge", "Nika", ""), lastName: "Loliashvili" }], by);
+    const [r] = await registrationsFor(db, workshopId);
+    expect(r).toMatchObject({ match: "new", errors: [] });
+    expect(r!.notes.join(" ")).toContain("email");
+  });
+
+  it("new students without an id get one from the system, numbered in order", async () => {
+    await saveRegistrations(db, workshopId, [row("nika.l@btu.edu.ge", "Nika", ""), row("ana.b@btu.edu.ge", "Ana", "", 3)], by);
+    await setPassed(db, workshopId, await ids(), true, by);
+    const r = await createWorkshopRecords(db, workshopId, by);
+    expect(r.ok && r.value.rejected).toEqual([]);
+    const made = await db.select({ id: students.studentId, email: students.email }).from(students).orderBy(students.studentId);
+    expect(made.filter((s) => s.id.startsWith("BTU-S-"))).toEqual([
+      { id: "BTU-S-000001", email: "nika.l@btu.edu.ge" }, { id: "BTU-S-000002", email: "ana.b@btu.edu.ge" },
+    ]);
+    const [again] = await db.select().from(workshopRegistrations).where(eq(workshopRegistrations.email, "ana.b@btu.edu.ge"));
+    expect(again!.studentId).toBe("BTU-S-000002");
+  });
+
+  it("a later batch continues the numbering instead of starting over", async () => {
+    await saveRegistrations(db, workshopId, [row("nika.l@btu.edu.ge", "Nika", "")], by);
+    await setPassed(db, workshopId, await ids(), true, by);
+    await createWorkshopRecords(db, workshopId, by);
+    await saveRegistrations(db, workshopId, [row("ana.b@btu.edu.ge", "Ana", "", 3)], by);
+    await setPassed(db, workshopId, await ids(), true, by).catch(() => undefined);
+    const [ana] = await db.select().from(workshopRegistrations).where(eq(workshopRegistrations.email, "ana.b@btu.edu.ge"));
+    await setPassed(db, workshopId, [ana!.id], true, by);
+    const r = await createWorkshopRecords(db, workshopId, by);
+    expect(r.ok && r.value.rejected).toEqual([]);
+    expect((await db.select().from(students).where(eq(students.email, "ana.b@btu.edu.ge")))[0]!.studentId).toBe("BTU-S-000002");
+  });
+
   it("setPassed refuses a row that already has a record", async () => {
     await saveRegistrations(db, workshopId, [row("nino.m@btu.edu.ge", "Nino", "BTU-T-0001")], by);
     await setPassed(db, workshopId, await ids(), true, by);

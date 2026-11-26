@@ -57,7 +57,7 @@ export async function checkRecords(db: Db, items: NewRecord[]): Promise<CheckRes
 }
 
 // the passports among these students that now have a confirmed skill waiting to be issued
-async function waiting(tx: Tx, studentIds: string[]): Promise<string[]> {
+export async function waiting(tx: Tx, studentIds: string[]): Promise<string[]> {
   if (!studentIds.length) return [];
   const rows = await tx.selectDistinct({ passportId: passports.passportId }).from(skillAwards)
     .innerJoin(passports, eq(passports.studentId, skillAwards.studentId))

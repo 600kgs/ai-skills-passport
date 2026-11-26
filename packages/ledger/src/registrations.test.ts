@@ -4,7 +4,7 @@ import type pg from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { resetLedgerDb, setupLedgerDb } from "../test/db.ts";
 import { createRecords } from "./records.ts";
-import { createWorkshopRecords, registrationsFor, saveRegistrations, setPassed } from "./registrations.ts";
+import { confirmWorkshopRecords, createWorkshopRecords, registrationsFor, renameRegistration, saveRegistrations, setPassed } from "./registrations.ts";
 import { saveWorkshop } from "./workshops.ts";
 
 let db: Db;
@@ -126,6 +126,31 @@ describe("registrations", () => {
     const r = await createWorkshopRecords(db, workshopId, by);
     expect(r.ok && r.value.rejected).toEqual([]);
     expect((await db.select().from(students).where(eq(students.email, "ana.b@btu.edu.ge")))[0]!.studentId).toBe("BTU-S-000002");
+  });
+
+  it("confirmWorkshopRecords confirms every pending record of that workshop and queues the passports", async () => {
+    await saveRegistrations(db, workshopId, [row("nino.m@btu.edu.ge", "Nino", "BTU-T-0001"), row("luka@btu.edu.ge", "Luka", "BTU-T-0003", 3)], by);
+    await setPassed(db, workshopId, await ids(), true, by);
+    await createWorkshopRecords(db, workshopId, by);
+    const r = await confirmWorkshopRecords(db, workshopId, "admin@btu.edu.ge");
+    expect(r.ok && r.value.confirmed.length).toBe(2);
+    expect(r.ok && r.value.queue.length).toBe(2);
+    const awards = await db.select().from(skillAwards).where(eq(skillAwards.source, "workshop"));
+    expect(awards.every((a) => a.state === "pending" && a.verification === "CONFIRMED" && a.decidedBy === "admin@btu.edu.ge")).toBe(true);
+    // giorgi's own web record for the same skill stays untouched
+    expect((await db.select().from(skillAwards).where(eq(skillAwards.source, "web")))[0]!.verification).toBe("PENDING");
+  });
+
+  it("renameRegistration fixes a name before the record exists, and refuses after", async () => {
+    await saveRegistrations(db, workshopId, [row("otaritomas.sepashvili.1@btu.edu.ge", "Otaritomas", "")], by);
+    const [id] = await ids();
+    expect((await renameRegistration(db, workshopId, id!, "Otari Tomas", "Sepashvili", by)).ok).toBe(true);
+    expect((await db.select().from(workshopRegistrations))[0]).toMatchObject({ firstName: "Otari Tomas", lastName: "Sepashvili" });
+    expect((await renameRegistration(db, workshopId, id!, " ", "X", by)).ok).toBe(false);
+    await setPassed(db, workshopId, [id!], true, by);
+    await createWorkshopRecords(db, workshopId, by);
+    expect((await renameRegistration(db, workshopId, id!, "Oto", "Sepashvili", by)).ok).toBe(false);
+    expect((await db.select().from(students).where(eq(students.email, "otaritomas.sepashvili.1@btu.edu.ge")))[0]!.firstName).toBe("Otari Tomas");
   });
 
   it("setPassed refuses a row that already has a record", async () => {

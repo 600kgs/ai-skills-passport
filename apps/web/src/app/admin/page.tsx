@@ -3,7 +3,7 @@ import { roleAtLeast } from "@passport/core";
 import { fill, formatDate } from "@/i18n/format";
 import { getDict } from "@/i18n/server";
 import { overview, pendingRecords, removedRecords } from "@/lib/admin";
-import { DecisionButtons } from "./buttons";
+import { ConfirmAllButton, DecisionButtons } from "./buttons";
 import { requireRole } from "./guard";
 
 const LOW_BALANCE_ISSUES = 20;
@@ -14,6 +14,22 @@ export default async function AdminOverviewPage() {
   const t = d.admin.overview;
   const { counts, issuer, failedVersions } = o;
   const short = (a: string) => `${a.slice(0, 4)}...${a.slice(-4)}`;
+
+  // records a workshop produced are grouped, so an admin can confirm the whole list at once
+  const groups = new Map<number, typeof pending>();
+  for (const r of pending) if (r.workshopId) groups.set(r.workshopId, [...(groups.get(r.workshopId) ?? []), r]);
+  const single = pending.filter((r) => !r.workshopId);
+  const item = (r: (typeof pending)[number]) => (
+    <li key={r.recordId} className="grid gap-4 py-5 sm:grid-cols-[1fr_auto] sm:items-center">
+      <div>
+        <p className="text-lg"><b className="text-ink">{r.skillName}</b> <span className="text-muted">{r.category}</span></p>
+        <p className="mt-1 text-muted">
+          {r.firstName} {r.lastName}, {r.passportId ?? r.studentId}. {fill(t.earned, { date: formatDate(d.locale, r.dateEarned), rec: r.recordId })}
+        </p>
+      </div>
+      {canDecide && <DecisionButtons recordId={r.recordId} label={`${r.skillName}, ${r.firstName} ${r.lastName}`} />}
+    </li>
+  );
 
   return (
     <>
@@ -50,19 +66,16 @@ export default async function AdminOverviewPage() {
         ) : (
           <>
             <p className="mt-4 max-w-prose text-muted">{t.pendingHelp}</p>
-            <ul className="mt-2 divide-y divide-line">
-              {pending.map((r) => (
-                <li key={r.recordId} className="grid gap-4 py-5 sm:grid-cols-[1fr_auto] sm:items-center">
-                  <div>
-                    <p className="text-lg"><b className="text-ink">{r.skillName}</b> <span className="text-muted">{r.category}</span></p>
-                    <p className="mt-1 text-muted">
-                      {r.firstName} {r.lastName}, {r.passportId ?? r.studentId}. {fill(t.earned, { date: formatDate(d.locale, r.dateEarned), rec: r.recordId })}
-                    </p>
-                  </div>
-                  {canDecide && <DecisionButtons recordId={r.recordId} label={`${r.skillName}, ${r.firstName} ${r.lastName}`} />}
-                </li>
-              ))}
-            </ul>
+            {[...groups].map(([id, list]) => (
+              <div key={id} className="mt-6 border-l-8 border-blue bg-panel p-4">
+                <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+                  <p className="font-display text-2xl text-ink">{fill(t.fromWorkshop, { title: list[0]!.workshopTitle ?? `W-${id}`, n: list.length })}</p>
+                  {canDecide && <ConfirmAllButton workshopId={id} count={list.length} title={list[0]!.workshopTitle ?? ""} />}
+                </div>
+                <ul className="mt-2 divide-y divide-line">{list.map(item)}</ul>
+              </div>
+            ))}
+            {single.length > 0 && <ul className="mt-2 divide-y divide-line">{single.map(item)}</ul>}
           </>
         )}
       </section>

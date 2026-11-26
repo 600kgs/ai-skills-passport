@@ -2,7 +2,7 @@
 import { nameFromEmail, type NewRecord, type RegistrationRow, type StudentInput, toTbilisi, validateStudent } from "@passport/core";
 import { and, auditLog, type Db, eq, inArray, isNull, skillAwards, sql, students, workshopRegistrations, workshops } from "@passport/db";
 import { fail, type LedgerResult, ok, withLedgerLock } from "./lock.ts";
-import { createRecordsTx } from "./records.ts";
+import { createRecordsTx, waiting } from "./records.ts";
 import { workshopSubject } from "./workshops.ts";
 
 // rows with a problem in the file itself (not a btu address) aren't stored
@@ -121,5 +121,31 @@ export async function createWorkshopRecords(db: Db, workshopId: number, by: stri
     const created = result.created.map((c) => c.recordId);
     await tx.insert(auditLog).values({ actor: by, action: "workshop_records_created", subject: workshopSubject(workshopId), details: { created, rejected: result.rejected.length } });
     return ok({ created, rejected: result.rejected.map((x) => ({ email: rows[x.index]!.email, errors: x.errors })) });
+  });
+}
+
+// an admin confirms a whole workshop at once instead of record by record
+export async function confirmWorkshopRecords(db: Db, workshopId: number, by: string): Promise<LedgerResult<{ confirmed: string[]; queue: string[] }>> {
+  return withLedgerLock(db, async (tx) => {
+    const rows = await tx.update(skillAwards).set({ verification: "CONFIRMED", state: "pending", decidedBy: by, decidedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(skillAwards.workshopId, workshopId), eq(skillAwards.verification, "PENDING"), eq(skillAwards.state, "ignored")))
+      .returning({ recordId: skillAwards.recordId, studentId: skillAwards.studentId });
+    if (!rows.length) return ok({ confirmed: [], queue: [] });
+    await tx.insert(auditLog).values(rows.map((r) => ({ actor: by, action: "record_confirmed", subject: r.recordId, details: { workshop: workshopSubject(workshopId) } })));
+    return ok({ confirmed: rows.map((r) => r.recordId), queue: await waiting(tx, [...new Set(rows.map((r) => r.studentId))]) });
+  });
+}
+
+// fixes a name taken from the email before the record is made; after that the student's own page is the place
+export async function renameRegistration(db: Db, workshopId: number, id: number, firstName: string, lastName: string, by: string): Promise<LedgerResult<void>> {
+  const first = firstName.trim(), last = lastName.trim();
+  if (!first || !last) return fail("first and last name are both required");
+  return withLedgerLock(db, async (tx) => {
+    const [reg] = await tx.select().from(workshopRegistrations).where(and(eq(workshopRegistrations.id, id), eq(workshopRegistrations.workshopId, workshopId)));
+    if (!reg) return fail("that registration doesn't exist");
+    if (reg.recordId) return fail(`${reg.email} already has a record; fix the name on the student instead`);
+    await tx.update(workshopRegistrations).set({ firstName: first, lastName: last }).where(eq(workshopRegistrations.id, id));
+    await tx.insert(auditLog).values({ actor: by, action: "registration_renamed", subject: workshopSubject(workshopId), details: { email: reg.email, firstName: first, lastName: last } });
+    return ok(undefined);
   });
 }

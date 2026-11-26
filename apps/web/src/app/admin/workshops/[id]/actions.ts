@@ -1,7 +1,7 @@
 "use server";
 
 import { parseCsv, parseRegistrations, UPLOAD_MAX_BYTES } from "@passport/core";
-import { createWorkshopRecords, saveRegistrations, setPassed } from "@passport/ledger";
+import { createWorkshopRecords, renameRegistration, saveRegistrations, setPassed } from "@passport/ledger";
 import { fill } from "@/i18n/format";
 import { getDict } from "@/i18n/server";
 import { currentStaff } from "@/lib/auth";
@@ -62,4 +62,12 @@ export async function makeRecords(workshopId: number): Promise<ActionResult> {
     message: fill(t.created, { n: created.length })
       + (rejected.length ? fill(t.notCreated, { list: rejected.map((x) => `${x.email}: ${x.errors.join("; ")}`).join(", ") }) : ""),
   };
+}
+
+export async function renameReg(workshopId: number, id: number, firstName: string, lastName: string): Promise<ActionResult> {
+  const d = await getDict();
+  const me = await currentStaff("editor");
+  if (!me) return { ok: false, message: d.admin.workshops.onlyEditors };
+  const r = await renameRegistration(getDb(), Number(workshopId), Number(id), String(firstName ?? ""), String(lastName ?? ""), me.email);
+  return r.ok ? { ok: true, message: d.admin.registrations.nameSaved } : { ok: false, message: r.error };
 }

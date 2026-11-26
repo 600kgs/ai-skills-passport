@@ -1,6 +1,6 @@
 "use server";
 
-import { decideRecord as decide } from "@passport/ledger";
+import { confirmWorkshopRecords, decideRecord as decide } from "@passport/ledger";
 import { fill } from "@/i18n/format";
 import { getDict } from "@/i18n/server";
 import { currentStaff } from "@/lib/auth";
@@ -21,4 +21,15 @@ export async function decideRecord(recordId: string, status: "CONFIRMED" | "REJE
   await enqueueIssue(r.value.queue);
   if (status === "REJECTED") return { ok: true, message: fill(t.rejected, { rec: recordId }) };
   return { ok: true, message: fill(r.value.queue.length ? t.confirmedIssuing : t.confirmed, { rec: recordId }) };
+}
+
+// every pending record a workshop produced, in one click
+export async function confirmWorkshop(workshopId: number): Promise<ActionResult> {
+  const d = await getDict();
+  const admin = await currentStaff("admin");
+  if (!admin) return { ok: false, message: d.admin.actions.onlyAdmins };
+  const r = await confirmWorkshopRecords(getDb(), Number(workshopId), admin.email);
+  if (!r.ok) return { ok: false, message: r.error };
+  await enqueueIssue(r.value.queue);
+  return { ok: true, message: fill(d.admin.overview.confirmedAll, { n: r.value.confirmed.length }) };
 }

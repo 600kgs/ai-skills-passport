@@ -3,7 +3,7 @@ import {
   ACTIVITY_PER_PAGE, ACTIVITY_TYPES, type ActivityFilters, authorizedSigners, normalizeCode, type PassportFilters, PASSPORTS_PER_PAGE,
   REMOVED_FROM_SHEET,
 } from "@passport/core";
-import { and, auditLog, desc, eq, inArray, lt, passports, passportVersions, skillAwards, type SQL, sql, students } from "@passport/db";
+import { and, auditLog, desc, eq, inArray, lt, passports, passportVersions, skillAwards, type SQL, sql, students, workshops } from "@passport/db";
 import { getDb } from "@/lib/db";
 
 const SOL_PER_ISSUE = 0.0017; // measured on devnet, 2026-10-22
@@ -44,10 +44,12 @@ export async function pendingRecords() {
   return getDb().select({
     recordId: skillAwards.recordId, skillName: skillAwards.skillName, category: skillAwards.category, dateEarned: skillAwards.dateEarned,
     studentId: students.studentId, firstName: students.firstName, lastName: students.lastName, passportId: passports.passportId,
+    workshopId: skillAwards.workshopId, workshopTitle: workshops.title,
   })
     .from(skillAwards)
     .innerJoin(students, eq(students.studentId, skillAwards.studentId))
     .leftJoin(passports, eq(passports.studentId, skillAwards.studentId))
+    .leftJoin(workshops, eq(workshops.id, skillAwards.workshopId))
     // ignored = still waiting; a pending record whose row was deleted is held and listed under removedRecords instead
     .where(and(eq(skillAwards.verification, "PENDING"), eq(skillAwards.state, "ignored")))
     .orderBy(skillAwards.recordId);

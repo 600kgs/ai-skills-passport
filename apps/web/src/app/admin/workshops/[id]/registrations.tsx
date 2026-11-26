@@ -6,7 +6,7 @@ import { useRef, useState, useTransition } from "react";
 import { useDict } from "@/i18n/client";
 import { fill } from "@/i18n/format";
 import type { ActionResult } from "../../actions";
-import { makeRecords, markPassed, uploadRegistrations } from "./actions";
+import { makeRecords, markPassed, renameReg, uploadRegistrations } from "./actions";
 
 export type RegistrationView = {
   id: number; email: string; firstName: string; lastName: string; studentId: string; passed: boolean; recordId: string | null;
@@ -79,6 +79,9 @@ export function Registrations({ workshopId, rows, canEdit, hasSkill }: { worksho
                     <td className="py-3 pr-4">
                       <span className="font-semibold text-ink">{r.storedName ?? `${r.firstName} ${r.lastName}`}</span>
                       <span className="block text-sm break-all text-muted">{r.email}{r.studentId ? `, ${r.studentId}` : ""}</span>
+                      {canEdit && !r.recordId && r.match !== "existing" && (
+                        <NameEditor first={r.firstName} last={r.lastName} onSave={(f, l) => run(() => renameReg(workshopId, r.id, f, l))} disabled={pending} />
+                      )}
                     </td>
                     <td className="py-3 pr-4 text-sm">
                       <span className={r.match === "problem" ? "font-semibold text-magenta" : ""}>{matchLabel[r.match]}</span>
@@ -106,5 +109,25 @@ export function Registrations({ workshopId, rows, canEdit, hasSkill }: { worksho
         </>
       )}
     </div>
+  );
+}
+
+// a name taken from the email can be put right here, before the record (and later the pdf) carries it
+function NameEditor({ first, last, onSave, disabled }: { first: string; last: string; onSave: (first: string, last: string) => void; disabled: boolean }) {
+  const t = useDict().admin.registrations;
+  const [open, setOpen] = useState(false);
+  const [f, setF] = useState(first);
+  const [l, setL] = useState(last);
+  if (!open) return <button type="button" onClick={() => setOpen(true)} className={`mt-1 text-sm ${link}`}>{t.editName}</button>;
+  const field = "w-full min-w-0 border-2 border-line bg-white px-2 py-1 text-sm";
+  return (
+    <form className="mt-2 grid max-w-xs gap-2" onSubmit={(e) => { e.preventDefault(); onSave(f, l); setOpen(false); }}>
+      <label className="text-xs text-muted">{t.firstName}<input required value={f} onChange={(e) => setF(e.target.value)} className={field} /></label>
+      <label className="text-xs text-muted">{t.lastName}<input required value={l} onChange={(e) => setL(e.target.value)} className={field} /></label>
+      <span className="flex gap-3">
+        <button type="submit" disabled={disabled} className="bg-magenta px-3 pt-1 pb-0.5 font-display text-lg text-white disabled:opacity-60">{t.saveName}</button>
+        <button type="button" onClick={() => setOpen(false)} className={`text-sm ${link}`}>{t.cancelEdit}</button>
+      </span>
+    </form>
   );
 }

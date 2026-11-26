@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useDict } from "@/i18n/client";
-import { decideRecord, type ActionResult } from "./actions";
+import { fill } from "@/i18n/format";
+import { confirmWorkshop, decideRecord, type ActionResult } from "./actions";
 
 function useAction() {
   const network = useDict().admin.actions.network;
@@ -42,6 +43,21 @@ export function DecisionButtons({ recordId, label }: { recordId: string; label: 
         </button>
       </div>
       {pending && <p className="mt-3 text-sm text-muted">{t.writing}</p>}
+      <Result result={result} />
+    </div>
+  );
+}
+
+export function ConfirmAllButton({ workshopId, count, title }: { workshopId: number; count: number; title: string }) {
+  const t = useDict().admin.overview;
+  const { pending, result, run } = useAction();
+  return (
+    <div className="sm:text-right">
+      <button type="button" disabled={pending}
+        onClick={() => { if (window.confirm(fill(t.confirmAllAsk, { n: count, title }))) run(() => confirmWorkshop(workshopId)); }}
+        className="bg-magenta px-5 pt-2.5 pb-2 font-display text-2xl text-white hover:bg-magenta-deep disabled:opacity-60">
+        {fill(t.confirmAll, { n: count })}
+      </button>
       <Result result={result} />
     </div>
   );

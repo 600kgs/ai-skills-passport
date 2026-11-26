@@ -1,5 +1,5 @@
 import { recordFilters, type StudentInput } from "@passport/core";
-import { type Db, skills } from "@passport/db";
+import { type Db, eq, passportVersions, skillAwards, skills } from "@passport/db";
 import type pg from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { resetLedgerDb, setupLedgerDb } from "../test/db.ts";
@@ -34,6 +34,17 @@ describe("record list", () => {
     expect((await listRecords(db, recordFilters({ q: "REC-0003" }))).rows.map((r) => r.recordId)).toEqual(["REC-0003"]);
     expect((await listRecords(db, recordFilters({ verification: "PENDING" }))).total).toBe(2);
     expect((await listRecords(db, recordFilters({ source: "excel" }))).rows[0]).toMatchObject({ firstName: "Giorgi", skillName: "AI Literacy" });
+  });
+
+  it("tells which version an issued record is in", async () => {
+    const [v] = await db.insert(passportVersions).values({
+      passportId: "BTU-AI-000001", versionNo: 3, verificationCode: "CODE-3", state: "issued", skillCount: 1,
+      includedRecordIds: ["REC-0002"], pdfSha256: "aa", txSignature: "s", issuedAt: new Date(),
+    }).returning();
+    await db.update(skillAwards).set({ state: "applied", appliedInVersionId: v!.id }).where(eq(skillAwards.recordId, "REC-0002"));
+    const rows = (await listRecords(db, recordFilters({ q: "maisur" }))).rows;
+    expect(rows.find((r) => r.recordId === "REC-0002")!.versionNo).toBe(3);
+    expect(rows.find((r) => r.recordId === "REC-0001")!.versionNo).toBe(null);
   });
 
   it("lists newest records first", async () => {

@@ -24,6 +24,11 @@ describe("workshop fields", () => {
     expect(validateWorkshop({ ...w, startsAt: "2026-02-31T10:00" })).toHaveLength(1);
   });
 
+  it("refuses a title longer than 200 characters (it becomes the records' earned-through text)", () => {
+    expect(validateWorkshop({ ...w, title: "x".repeat(201) })).toHaveLength(1);
+    expect(validateWorkshop({ ...w, title: "x".repeat(200) })).toEqual([]);
+  });
+
   it("refuses an unknown kind and missing title, trainer or place", () => {
     expect(validateWorkshop({ ...w, kind: "party" as never, title: " ", trainer: "", location: "" })).toHaveLength(4);
   });

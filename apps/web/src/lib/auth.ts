@@ -43,7 +43,12 @@ export async function currentUser(): Promise<Viewer | null> {
   const requestHeaders = await headers();
   const session = await getAuth().api.getSession({ headers: requestHeaders });
   if (!session || !isBtuAccount(session.user)) return null;
-  const stored = await getStaffRole(getDb(), session.user.email);
+  // if the staff table can't be read (say the web started before the worker's migrations), pages keep working
+  // and only the server-config superadmins have a role until it can
+  const stored = await getStaffRole(getDb(), session.user.email).catch((e: unknown) => {
+    console.error("couldn't read the staff role:", (e as Error).message);
+    return null;
+  });
   return { email: session.user.email, name: session.user.name, role: resolveRole(session.user, stored, process.env.ADMIN_EMAILS) };
 }
 

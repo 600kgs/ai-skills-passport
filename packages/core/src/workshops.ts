@@ -26,6 +26,8 @@ export function validateWorkshop(w: WorkshopInput): string[] {
   const errors: string[] = [];
   if (!(WORKSHOP_KINDS as readonly string[]).includes(w.kind)) errors.push(`kind must be workshop or hackathon`);
   if (!w.title.trim()) errors.push("title is required");
+  // the title becomes the records' "earned through" text, which holds 200 characters
+  else if (w.title.trim().length > 200) errors.push("title is longer than 200 characters");
   if (!w.trainer.trim()) errors.push("trainer is required");
   if (!w.location.trim()) errors.push("place is required");
   const start = fromTbilisi(w.startsAt);

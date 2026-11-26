@@ -1,5 +1,5 @@
 import { RECORDS_PER_PAGE, type RecordFilters } from "@passport/core";
-import { and, type Db, desc, eq, passports, type SQL, skillAwards, sql, students } from "@passport/db";
+import { and, type Db, desc, eq, passports, passportVersions, type SQL, skillAwards, sql, students } from "@passport/db";
 
 // every passport with a confirmed skill not yet issued. the worker queues these on a timer, so an issue
 // job lost between a page's write and its queue message still runs
@@ -36,11 +36,12 @@ export async function listRecords(db: Db, f: RecordFilters, perPage = RECORDS_PE
     recordId: skillAwards.recordId, skillId: skillAwards.skillId, skillName: skillAwards.skillName, dateEarned: skillAwards.dateEarned,
     verification: skillAwards.verification, state: skillAwards.state, source: skillAwards.source, error: skillAwards.error,
     studentId: students.studentId, firstName: students.firstName, lastName: students.lastName, email: students.email,
-    passportId: passports.passportId,
+    passportId: passports.passportId, versionNo: passportVersions.versionNo,
   })
     .from(skillAwards)
     .innerJoin(students, eq(students.studentId, skillAwards.studentId))
     .leftJoin(passports, eq(passports.studentId, skillAwards.studentId))
+    .leftJoin(passportVersions, eq(passportVersions.id, skillAwards.appliedInVersionId))
     .where(where)
     // record ids grow with time; ordered by their number so REC-10000 lands after REC-9999
     .orderBy(desc(sql`coalesce(substring(${skillAwards.recordId} from '^REC-(\\d+)$')::int, 0)`), desc(skillAwards.recordId))
@@ -67,10 +68,11 @@ export async function findStudents(db: Db, q: string, limit = 10) {
 
 // one record with its student, for the edit page
 export async function recordDetail(db: Db, recordId: string) {
-  const [row] = await db.select({ award: skillAwards, student: students, passportId: passports.passportId })
+  const [row] = await db.select({ award: skillAwards, student: students, passportId: passports.passportId, versionNo: passportVersions.versionNo })
     .from(skillAwards)
     .innerJoin(students, eq(students.studentId, skillAwards.studentId))
     .leftJoin(passports, eq(passports.studentId, skillAwards.studentId))
+    .leftJoin(passportVersions, eq(passportVersions.id, skillAwards.appliedInVersionId))
     .where(eq(skillAwards.recordId, recordId));
   if (!row) return null;
   const [issued] = await db.execute<{ n: number }>(sql`select count(*)::int as n from passport_versions

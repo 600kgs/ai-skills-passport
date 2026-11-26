@@ -7,6 +7,7 @@ import { getDict } from "@/i18n/server";
 import { getDb } from "@/lib/db";
 import { requireRole } from "../../guard";
 import { EditRecordForm, EditStudentForm } from "../forms";
+import { recordStatus } from "../status";
 
 const link = "underline decoration-magenta decoration-2 underline-offset-2 hover:text-magenta";
 
@@ -20,7 +21,7 @@ export default async function RecordPage({ params }: PageProps<"/admin/records/[
   const states = d.admin.passport.recordStates as Record<string, string>;
   const a = r.award;
   const editable = canEdit && (a.state === "pending" || a.state === "ignored");
-  const status = a.verification === "PENDING" && a.state === "ignored" ? states.awaiting : a.verification === "REJECTED" ? states.rejected : states[a.state] ?? a.state;
+  const status = recordStatus(states, { verification: a.verification, state: a.state, versionNo: r.versionNo });
 
   return (
     <section aria-labelledby="rec-h" className="mt-10 max-w-3xl">
